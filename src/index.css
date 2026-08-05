@@ -1,0 +1,21 @@
+/* Neutral grund. Den färgstarka designen kommer senare. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+main {
+  padding: 2rem;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
