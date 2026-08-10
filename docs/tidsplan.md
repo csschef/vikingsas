@@ -16,9 +16,9 @@ Deadline 25 augusti 2026 21:59.
 
 | Uppgift | Tidsåtgång (h) | Risk | Status |
 | --- | ---: | --- | --- |
-| Sätta upp Postgres på Supabase | 2 | låg | |
-| Skapa tabeller enligt ER-diagram | 3 | låg | |
-| Lägga in de 10 produkterna | 3 | låg |  |
+| Sätta upp Postgres på Supabase | 2 | låg | klar |
+| Skapa tabeller enligt ER-diagram | 3 | låg | klar |
+| Lägga in de 10 produkterna | 3 | låg | klar |
 | Koppla Express till databasen | 3 | medel | |
 
 ## API
@@ -87,8 +87,6 @@ Görs efter att G är klart och deployat.
 | **Summa G** | **95** |
 | VG | 17 |
 | **Summa totalt** | **112** |
-
-4 timmar är redan gjorda. Kvar för G är 91 timmar, fördelat på 15 vardagar fram till deadline blir det drygt 6 timmar per vardag.
 
 De två posterna med hög risk är båda deploy. Därför görs en första deploy tidigt, innan sidan är färdig, så att problemen dyker upp när det finns tid kvar att lösa dem.
 
