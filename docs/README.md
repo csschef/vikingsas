@@ -6,4 +6,4 @@ Underlaget som lämnas in tillsammans med koden.
 | --- | --- | --- |
 | Tidsplan | `tidsplan.md` | klar |
 | Sitemap | `sitemap.md` | klar |
-| ER-diagram | `er-diagram.md` + export från draw.io | ej påbörjad |
+| ER-diagram | `er-diagram.md`, `er-diagram.webp`, `er-diagram.drawio` | klar |

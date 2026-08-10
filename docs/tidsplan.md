@@ -9,7 +9,7 @@ Deadline 25 augusti 2026 21:59.
 | Projektuppsättning | 2 | låg | klar |
 | Research och beslut om typ av E-handel | 2 | låg | klar |
 | Tidsplan och sitemap | 3 | låg | klar |
-| ER-diagram | 3 | låg | |
+| ER-diagram | 3 | låg | klar |
 | Grundläggande CSS | 12 | medel | |
 
 ## Databas
