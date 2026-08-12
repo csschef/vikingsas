@@ -20,4 +20,16 @@ app.get('/api/health', async (_req, res) => {
   }
 })
 
+app.get('/api/products', async (_req, res) => {
+  try {
+    const products = await pool.query('SELECT * FROM products WHERE is_active = true ORDER BY heat_level')
+    res.json({ results: products.rows })
+  } catch (error) {
+    res.status(500).json({
+      status: 'fel',
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+})
+
 export default app

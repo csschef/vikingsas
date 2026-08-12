@@ -25,7 +25,7 @@ Deadline 25 augusti 2026 21:59.
 
 | Uppgift | Tidsåtgång (h) | Risk | Status |
 | --- | ---: | --- | --- |
-| Lista produkter | 1 | låg | |
+| Lista produkter | 1 | låg | klar |
 | Skapa produkt | 1 | låg | |
 | Redigera produkt | 2 | låg | |
 | Ta bort produkt | 1 | låg | |
