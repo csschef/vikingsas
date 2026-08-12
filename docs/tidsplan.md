@@ -28,7 +28,7 @@ Deadline 25 augusti 2026 21:59.
 | Lista produkter | 1 | låg | klar |
 | Skapa produkt | 1 | låg | klar |
 | Redigera produkt | 2 | låg | klar |
-| Ta bort produkt | 1 | låg | |
+| Ta bort produkt | 1 | låg | klar |
 | Skapa order | 3 | medel | |
 | Lista ordrar | 2 | låg | |
 | Visa enskild order | 1 | låg | |
