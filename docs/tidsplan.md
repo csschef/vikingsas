@@ -19,7 +19,7 @@ Deadline 25 augusti 2026 21:59.
 | Sätta upp Postgres på Supabase | 2 | låg | klar |
 | Skapa tabeller enligt ER-diagram | 3 | låg | klar |
 | Lägga in de 10 produkterna | 3 | låg | klar |
-| Koppla Express till databasen | 3 | medel | |
+| Koppla Express till databasen | 3 | medel | klar |
 
 ## API
 
