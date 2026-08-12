@@ -81,4 +81,57 @@ app.post('/api/products', async (req, res) => {
   }
 })
 
+app.put('/api/products/:id', async (req, res) => {
+  try {
+    const updatedProduct = await pool.query(
+      `UPDATE products SET
+      title = $1,
+      description = $2,
+      volume_ml = $3,
+      price = $4,
+      heat_level = $5,
+      image_url = $6,
+      ingredients = $7,
+      energy_kj = $8,
+      energy_kcal = $9,
+      fat_g = $10,
+      saturated_fat_g = $11,
+      carbohydrate_g = $12,
+      sugars_g = $13,
+      protein_g = $14,
+      salt_g = $15
+      WHERE id = $16
+      RETURNING *`,
+      [
+        req.body.title,
+        req.body.description,
+        req.body.volume_ml,
+        req.body.price,
+        req.body.heat_level,
+        req.body.image_url,
+        req.body.ingredients,
+        req.body.energy_kj,
+        req.body.energy_kcal,
+        req.body.fat_g,
+        req.body.saturated_fat_g,
+        req.body.carbohydrate_g,
+        req.body.sugars_g,
+        req.body.protein_g,
+        req.body.salt_g,
+        req.params.id
+      ]
+    )
+    if (updatedProduct.rows.length === 0) {
+      return res.status(404).json({ status: 'fel', error: 'Produkten finns inte' })
+    }
+    res.json({ product: updatedProduct.rows[0] })
+  }
+  catch (error) {
+    res.status(500).json({
+      status: 'fel',
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+})
+
 export default app
