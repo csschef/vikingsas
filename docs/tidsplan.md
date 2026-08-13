@@ -60,8 +60,8 @@ Deadline 25 augusti 2026 21:59.
 
 | Uppgift | Tidsåtgång (h) | Risk | Status |
 | --- | ---: | --- | --- |
-| Första deploy till Vercel | 6 | hög | |
-| Koppla databasen i produktion | 4 | hög | |
+| Första deploy till Vercel | 6 | hög | klar |
+| Koppla databasen i produktion | 4 | hög | klar |
 | Testning, buggfix och polish | 8 | låg | |
 
 ## VG
