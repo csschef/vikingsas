@@ -1,7 +1,7 @@
 INSERT INTO products (title, description, volume_ml, price, heat_level, image_url, ingredients, energy_kj, energy_kcal, fat_g, saturated_fat_g, carbohydrate_g, sugars_g, protein_g, salt_g)
 VALUES
   ('Jalapeño', 'Grön och syrlig sås på färsk jalapeño. Mild nog att hälla över det mesta, bäst på tacos och i dressing.', 120, 89.00, 1, '/img/1.webp', 'Jalapeño, vatten, ättika, lök, salt, vitlök', 134, 32, 0.40, 0.10, 6.00, 4.50, 1.00, 2.60),
-  ('Mango', 'Söt mangosås med en liten skärpa på slutet. Passar till kyckling, halloumi och pommes.', 120, 99.00, 2, '/img/2.webp', 'Mango, socker, vatten, ättika, jalapeño, salt', 523, 125, 0.30, 0.10, 30.00, 27.00, 0.60, 1.10),
+  ('Mango', 'Söt mangosås med en liten skärpa på slutet från japape. Passar till kyckling, halloumi och pommes.', 120, 99.00, 2, '/img/2.webp', 'Mango, socker, vatten, ättika, jalapeño, salt', 523, 125, 0.30, 0.10, 30.00, 27.00, 0.60, 1.10),
   ('Chipotle', 'Rökig sås på chipotle, alltså jalapeño som har fått röka färdigt. Gör sig bäst på grillat och i burgare.', 120, 109.00, 3, '/img/3.webp', 'Tomat, chipotle, ättika, vatten, socker, lök, salt, spiskummin', 301, 72, 1.20, 0.20, 14.00, 11.00, 1.40, 2.90),
   ('Cayenne', 'Klassisk cayennesås på ättika, tunn och syrlig. Bra på kycklingvingar och i soppa.', 120, 109.00, 4, '/img/4.webp', 'Cayennepeppar, ättika, vatten, vitlök, salt', 80, 19, 0.40, 0.10, 3.00, 1.50, 0.80, 3.00),
   ('Habanero', 'Habanero ger en fruktig hetta som ligger kvar. Här börjar det märkas ordentligt.', 120, 119.00, 5, '/img/5.webp', 'Habanero, ättika, lök, vatten, salt, vitlök', 138, 33, 0.50, 0.10, 6.00, 3.50, 1.10, 3.10),
@@ -9,4 +9,4 @@ VALUES
   ('Ghost Pepper', 'Ghost pepper, eller bhut jolokia, var världens starkaste chili 2007. Några droppar i taget räcker.', 120, 139.00, 7, '/img/7.webp', 'Ghost pepper, ättika, vatten, vitlök, salt, socker', 159, 38, 0.50, 0.10, 7.00, 4.00, 1.30, 3.60),
   ('Carolina Reaper', 'Carolina Reaper höll världsrekordet i styrka i tio år. Sås för den som vet vad den ger sig in på.', 120, 149.00, 8, '/img/8.webp', 'Carolina reaper, ättika, vatten, tomat, vitlök, salt', 155, 37, 0.60, 0.10, 6.50, 3.50, 1.40, 3.80),
   ('7-Pot Douglah', 'Chokladbrun och rejält stark. Namnet kommer av att en enda chili sägs räcka till sju grytor.', 120, 165.00, 9, '/img/9.webp', '7-pot douglah, ättika, vatten, vitlök, salt', 142, 34, 0.70, 0.10, 5.50, 2.80, 1.50, 4.00),
-  ('Pepper X', 'Pepper X tog världsrekordet 2023. Starkast i sortimentet och inget man häller över maten utan att tänka efter.', 120, 179.00, 10, '/img/10.webp', 'Pepper X, ättika, vatten, vitlök, salt', 134, 32, 0.80, 0.20, 4.50, 2.00, 1.60, 4.20);
+  ('Pepper X', 'Pepper X, framavlad av den galne vetenskapsmannen "Smokin'' Ed" Currie tog världsrekordet 2023. Den är så stark så öronen trillar av.', 120, 179.00, 10, '/img/10.webp', 'Pepper X, ättika, vatten, vitlök, salt', 134, 32, 0.80, 0.20, 4.50, 2.00, 1.60, 4.20);
