@@ -7,7 +7,10 @@ type ProductSectionProps = {
 
 function ProductSection({ product, index }: ProductSectionProps) {
   return (
-    <section className={index % 2 === 0 ? 'product product-left' : 'product product-right'}>
+    <section
+      className={index % 2 === 0 ? 'product product-left' : 'product product-right'}
+      data-heat={product.heat_level}
+    >
       <div className="product-image">
         <img src={product.image_url} alt={product.title} loading="lazy" />
       </div>

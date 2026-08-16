@@ -1,4 +1,11 @@
-/* Neutral grund. Den färgstarka designen kommer senare. */
+:root {
+  --bg: #0a0708;
+  --text: #f6efe8;
+  --muted: rgba(246, 239, 232, 0.6);
+  --line: rgba(246, 239, 232, 0.18);
+  --glow: #ef5417;
+}
+
 *,
 *::before,
 *::after {
@@ -7,15 +14,271 @@
 
 body {
   margin: 0;
+  background: var(--bg);
+  color: var(--text);
   font-family: system-ui, sans-serif;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
-main {
-  padding: 2rem;
+/* Grain över hela sidan. Bruset ritas av webbläsaren via SVG, ingen bildfil behövs. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.22;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 img {
   max-width: 100%;
   display: block;
+}
+
+h1,
+h2 {
+  line-height: 1.05;
+  margin: 0;
+}
+
+/* Startsidans hero */
+
+.hero {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  padding: 2rem;
+  background: radial-gradient(circle at 50% 40%, rgba(239, 84, 23, 0.22), transparent 50%);
+}
+
+.hero h1 {
+  font-size: clamp(3rem, 12vw, 9rem);
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+
+.hero p {
+  color: var(--muted);
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  margin-top: 1.5rem;
+}
+
+/* En produkt per sektion, två spalter på desktop */
+
+.product {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: clamp(1rem, 2vw, 2.5rem);
+  padding: clamp(2rem, 5vw, 5rem);
+}
+
+/* Varannan sektion har bilden till höger. I HTML ligger bilden alltid först. */
+.product-right .product-image {
+  order: 2;
+}
+
+/* Båda blocken läggs mot mitten, så att gapet är det enda som skiljer dem åt. */
+.product-left .product-image,
+.product-right .product-info {
+  justify-self: end;
+}
+
+.product-left .product-info,
+.product-right .product-image {
+  justify-self: start;
+}
+
+/* Bildrutan är kvadratisk och lika stor i alla sektioner. Filerna är
+   normaliserade till 1200x1200, så motiven hamnar på samma plats varje gång. */
+.product-image {
+  position: relative;
+  width: min(100%, 34rem);
+  max-width: min(100%, 70svh);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+.product-image::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, var(--glow), transparent 65%);
+  filter: blur(60px);
+  opacity: 0.5;
+}
+
+.product-image img {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Färgen på glowen följer styrkan, från grön etta till glödande tia */
+.product[data-heat='1'] { --glow: #6cc24a; }
+.product[data-heat='2'] { --glow: #b3c93b; }
+.product[data-heat='3'] { --glow: #e0b53a; }
+.product[data-heat='4'] { --glow: #ef8f2b; }
+.product[data-heat='5'] { --glow: #f2701f; }
+.product[data-heat='6'] { --glow: #ef5417; }
+.product[data-heat='7'] { --glow: #e63b12; }
+.product[data-heat='8'] { --glow: #d9260f; }
+.product[data-heat='9'] { --glow: #d81212; }
+.product[data-heat='10'] { --glow: #ff1a1a; }
+
+.product-info {
+  max-width: 34rem;
+}
+
+.heat {
+  display: inline-block;
+  margin: 0 0 1rem;
+  padding: 0.3rem 0.9rem;
+  border: 1px solid var(--glow);
+  border-radius: 999px;
+  color: var(--glow);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.product-info h2 {
+  font-size: clamp(2rem, 5vw, 3.75rem);
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+.description {
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.price {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 1.5rem 0;
+}
+
+.volume {
+  color: var(--muted);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+/* Näringsvärden, hopfällbara */
+
+.nutrition {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 0.75rem 0;
+  margin-bottom: 2rem;
+}
+
+.nutrition summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.nutrition summary:hover {
+  color: var(--text);
+}
+
+.ingredients {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.nutrition table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.nutrition caption {
+  text-align: left;
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding-bottom: 0.5rem;
+}
+
+.nutrition th,
+.nutrition td {
+  padding: 0.45rem 0;
+  border-bottom: 1px dashed var(--line);
+}
+
+.nutrition tr:last-child th,
+.nutrition tr:last-child td {
+  border-bottom: 0;
+}
+
+.nutrition th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.nutrition td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Knappen */
+
+.product-info button {
+  background: var(--glow);
+  color: #150a05;
+  border: 0;
+  border-radius: 999px;
+  padding: 1rem 2.25rem;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.product-info button:hover {
+  filter: brightness(1.15);
+}
+
+/* Mobil: bilden överst, texten under */
+
+@media (max-width: 800px) {
+  .product {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    padding: 3rem 1.5rem;
+  }
+
+  .product-left .product-image,
+  .product-right .product-image,
+  .product-left .product-info,
+  .product-right .product-info {
+    justify-self: start;
+  }
+
+  .product-right .product-image {
+    order: 0;
+  }
+
+  .product-image {
+    max-width: min(100%, 50svh);
+  }
 }
