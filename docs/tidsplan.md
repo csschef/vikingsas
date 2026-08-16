@@ -49,8 +49,8 @@ Deadline 25 augusti 2026 21:59.
 
 | Uppgift | Tidsåtgång (h) | Risk | Status |
 | --- | ---: | --- | --- |
-| Produktlista med bilder och styrka | 3 | låg | |
-| Produktmodal med beskrivning | 2 | låg | |
+| Produktlista med bilder och styrka | 3 | låg | klar |
+| Produktinfo med beskrivning och näringsvärden | 2 | låg | klar |
 | Lägga i varukorg | 4 | medel | |
 | Varukorgssida | 3 | låg | |
 | Kassa med namn och e-post | 3 | låg | |
