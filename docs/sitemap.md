@@ -6,15 +6,12 @@ Sidorna i butiken och vad de gör.
 
 | Adress | Sida | Innehåll |
 | --- | --- | --- |
-| `/` | Startsida | Listar alla produkter med bild, titel, styrka, volym och pris. Knapp för att lägga i varukorgen. |
+| `/` | Startsida | En sektion per produkt med bild, titel, styrka, volym, pris och beskrivning. Knapp för att lägga i varukorgen. |
 | `/varukorg` | Varukorg | Valda produkter, antal, radsummor och totalsumma. Går vidare till kassan. |
 | `/kassa` | Kassa | Formulär med namn och e-post. Skickar ordern. |
 | `/tack` | Orderbekräftelse | Ordernummer och en sammanfattning av det som beställts. |
 
-Beskrivningen av en produkt visas i en modal på startsidan, inte på en egen sida för att förenkla då detaljsida inte är ett krav.
-Modalen öppnas när man klickar på en produkt och har därför ingen egen adress. Alternativt flippar kortet med en animation för att visa beskrivning på baksidan? Tror ej det, men får se.
-
-Modalen visar beskrivning, ingredienser och näringsvärden per 100 ml.
+Ingen egen detaljsida per produkt, eftersom det inte är ett krav. Beskrivningen ligger istället direkt i produktens sektion på startsidan, och ingredienser och näringsvärden per 100 ml i en hopfällbar ruta i samma sektion.
 
 ## Adminsidor
 

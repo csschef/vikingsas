@@ -1,20 +1,28 @@
 import { useEffect, useState } from 'react'
 
-// Tillfällig sida som visar att React når API:et. Byts ut mot produktlistan.
+type Product = {
+  id: number
+  title: string
+}
+
 function App() {
-  const [status, setStatus] = useState('kollar...')
+  const [products, setProducts] = useState<Product[]>([])
 
   useEffect(() => {
-    fetch('/api/health')
+    fetch('/api/products')
       .then((res) => res.json())
-      .then((data) => setStatus(data.status))
-      .catch(() => setStatus('inget svar från API:et'))
+      .then((data) => setProducts(data.products))
+      .catch((error) => console.error('Kunde inte hämta produkter', error))
   }, [])
 
   return (
     <main>
       <h1>Chilisåser</h1>
-      <p>API: {status}</p>
+      <ul>
+        {products.map((product) => (
+          <li key={product.id}>{product.title}</li>
+        ))}
+      </ul>
     </main>
   )
 }
