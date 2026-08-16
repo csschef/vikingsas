@@ -4,6 +4,7 @@
   --muted: rgba(246, 239, 232, 0.6);
   --line: rgba(246, 239, 232, 0.18);
   --glow: #ef5417;
+  --glow-opacity: 0.5;
 }
 
 *,
@@ -149,7 +150,7 @@ h2 {
   border-radius: 50%;
   background: radial-gradient(circle at center, var(--glow), transparent 65%);
   filter: blur(60px);
-  opacity: 0.5;
+  opacity: var(--glow-opacity);
 }
 
 .product-image img {
@@ -159,17 +160,19 @@ h2 {
   object-fit: contain;
 }
 
-/* Färgen på glowen följer styrkan, från grön etta till röd het tia */
-.product[data-heat='1'] { --glow: #6cc24a; }
-.product[data-heat='2'] { --glow: #b3c93b; }
-.product[data-heat='3'] { --glow: #e0b53a; }
-.product[data-heat='4'] { --glow: #ef8f2b; }
-.product[data-heat='5'] { --glow: #f2701f; }
-.product[data-heat='6'] { --glow: #ef5417; }
-.product[data-heat='7'] { --glow: #e63b12; }
-.product[data-heat='8'] { --glow: #d9260f; }
-.product[data-heat='9'] { --glow: #d81212; }
-.product[data-heat='10'] { --glow: #ff1a1a; }
+/* Glowen tar accentfärgen från etiketten, avläst ur bilderna */
+.product[data-heat='1'] { --glow: #84f535; }
+.product[data-heat='2'] { --glow: #fed800; }
+.product[data-heat='3'] { --glow: #eeb734; }
+.product[data-heat='4'] { --glow: #fb7c16; }
+.product[data-heat='5'] { --glow: #fb6406; }
+.product[data-heat='6'] { --glow: #fd4b06; }
+/* De fyra starkaste har nästan samma röda på etiketten. Glowen dämpas stegvis
+   istället, så den mörknar mot botten av skalan. */
+.product[data-heat='7'] { --glow: #f62710; --glow-opacity: 0.44; }
+.product[data-heat='8'] { --glow: #f71c15; --glow-opacity: 0.37; }
+.product[data-heat='9'] { --glow: #f4020b; --glow-opacity: 0.30; }
+.product[data-heat='10'] { --glow: #fb0f14; --glow-opacity: 0.23; }
 
 .product-info {
   max-width: 34rem;
