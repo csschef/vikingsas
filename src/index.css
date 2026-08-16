@@ -123,15 +123,6 @@ h2 {
   transition-delay: 0.15s;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .product .product-image,
-  .product .product-info {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-}
-
 /* Bildrutan är kvadratisk och lika stor i alla sektioner. Filerna är
    normaliserade till 1200x1200, så motiven hamnar på samma plats varje gång. */
 .product-image {
@@ -320,5 +311,25 @@ h2 {
 
   .product-image {
     max-width: min(100%, 50svh);
+  }
+
+  /* Spalterna ligger på varandra här, så inglidningen kommer nerifrån. En
+     rörelse i sidled sköt ut sektionerna utanför skärmkanten och gjorde sidan
+     bredare än mobilen. */
+  .product-left .product-image,
+  .product-right .product-image,
+  .product-left .product-info,
+  .product-right .product-info {
+    transform: translateY(3rem);
+  }
+}
+
+/* Ligger sist för att slå igenom även mot mobilreglerna ovan */
+@media (prefers-reduced-motion: reduce) {
+  .product .product-image,
+  .product .product-info {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
