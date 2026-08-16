@@ -27,7 +27,7 @@ body::after {
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  opacity: 0.22;
+  opacity: 0.18;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -94,6 +94,43 @@ h2 {
   justify-self: start;
 }
 
+/* Sektionen glider in när den kommer i vy. Klassen is-visible sätts av
+   IntersectionObserver i ProductSection. */
+.product .product-image,
+.product .product-info {
+  opacity: 0;
+  transition: opacity 0.9s ease-out, transform 0.9s ease-out;
+}
+
+.product-left .product-image,
+.product-right .product-info {
+  transform: translateX(-4rem);
+}
+
+.product-right .product-image,
+.product-left .product-info {
+  transform: translateX(4rem);
+}
+
+.product.is-visible .product-image,
+.product.is-visible .product-info {
+  opacity: 1;
+  transform: none;
+}
+
+.product.is-visible .product-info {
+  transition-delay: 0.15s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product .product-image,
+  .product .product-info {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 /* Bildrutan är kvadratisk och lika stor i alla sektioner. Filerna är
    normaliserade till 1200x1200, så motiven hamnar på samma plats varje gång. */
 .product-image {
@@ -122,7 +159,7 @@ h2 {
   object-fit: contain;
 }
 
-/* Färgen på glowen följer styrkan, från grön etta till glödande tia */
+/* Färgen på glowen följer styrkan, från grön etta till röd het tia */
 .product[data-heat='1'] { --glow: #6cc24a; }
 .product[data-heat='2'] { --glow: #b3c93b; }
 .product[data-heat='3'] { --glow: #e0b53a; }

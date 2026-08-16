@@ -1,4 +1,5 @@
 import type { Product } from '../types/types'
+import { useRef, useState, useEffect } from 'react'
 
 type ProductSectionProps = {
   product: Product
@@ -6,9 +7,32 @@ type ProductSectionProps = {
 }
 
 function ProductSection({ product, index }: ProductSectionProps) {
+  const sectionRef = useRef<HTMLElement>(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const element = sectionRef.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisible(true)
+        }
+      },
+      { threshold: 0.25 }
+    )
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+
+  const side = index % 2 === 0 ? 'product-left' : 'product-right'
+
   return (
     <section
-      className={index % 2 === 0 ? 'product product-left' : 'product product-right'}
+      ref={sectionRef}
+      className={visible ? `product ${side} is-visible` : `product ${side}`}
       data-heat={product.heat_level}
     >
       <div className="product-image">
