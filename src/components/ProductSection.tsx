@@ -20,7 +20,7 @@ function ProductSection({ product, index }: ProductSectionProps) {
           setVisible(true)
         }
       },
-      { threshold: 0.25 }
+      { threshold: 0.25 },
     )
 
     observer.observe(element)
@@ -56,7 +56,9 @@ function ProductSection({ product, index }: ProductSectionProps) {
             <tbody>
               <tr>
                 <th scope="row">Energi</th>
-                <td>{product.energy_kj} kJ / {product.energy_kcal} kcal</td>
+                <td>
+                  {product.energy_kj} kJ / {product.energy_kcal} kcal
+                </td>
               </tr>
               <tr>
                 <th scope="row">Fett</th>

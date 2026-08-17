@@ -23,7 +23,7 @@ body {
   line-height: 1.6;
 }
 
-/* Grain över hela sidan. Bruset ritas av webbläsaren via SVG, ingen bildfil behövs. */
+/* Grain över hela sidan, ritad som SVG i stället för bildfil */
 body::after {
   content: '';
   position: fixed;
@@ -45,6 +45,69 @@ h2 {
   margin: 0;
 }
 
+/* Sidhuvudet, ligger ovanpå heron. z-index 3 för att komma över grainen */
+
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem clamp(1.5rem, 5vw, 5rem);
+  transition: background-color 0.3s ease-out;
+}
+
+/* is-scrolled sätts av Header när sidan scrollats förbi 50px */
+.site-header.is-scrolled {
+  background-color: rgba(10, 7, 8, 0.8);
+  backdrop-filter: blur(12px);
+}
+
+.site-header a {
+  color: #cfc9c2;
+  text-decoration: none;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.logo {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.nav-link {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  transition: opacity 0.2s ease-out;
+}
+
+.nav-link:hover {
+  opacity: 1;
+}
+
+/* Undersidorna. Toppadding för att headern ligger fixed och inte tar plats */
+
+.cart-page,
+.checkout-page,
+.thank-you-page {
+  min-height: 100svh;
+  padding: 8rem clamp(1.5rem, 5vw, 5rem) 4rem;
+}
+
+.cart-page h1,
+.checkout-page h1,
+.thank-you-page h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #cfc9c2;
+  margin-bottom: 1.5rem;
+}
+
 /* Startsidans hero */
 
 .hero {
@@ -54,10 +117,7 @@ h2 {
   place-content: end center;
   text-align: center;
   padding: 2rem 2rem clamp(3rem, 8vh, 6rem);
-  /* Vinjett ovanpå bilden. Mitten lämnas fri och kanterna går mot svart, så
-     motivet ramas in och texten längst ner får en mörk botten att stå mot.
-     Gradienten mäts mot hörnen, så skärmkanterna ligger på 70 procent. Svart
-     läggs därför redan där, annars blir kanterna gråa. */
+  /* 70% eftersom gradienten mäts mot hörnen, vid 100% blir kanterna gråa */
   background-image:
     radial-gradient(ellipse at 50% 45%, transparent 5%, rgba(0, 0, 0, 1) 70%),
     url('/img/hero.webp');
@@ -65,12 +125,7 @@ h2 {
   background-position: center;
 }
 
-/* Luften mellan bokstäverna bär titeln, inte storleken, så graden är nedskruvad
-   för att bredden ska bli ungefär densamma. Tonen är dämpad och lite grå, ren
-   vit lade sig ovanpå bilden istället för i den.
-
-   text-indent väger upp för att mellanrummet läggs efter varje bokstav, även
-   den sista. Utan den hamnar den centrerade texten en aning för långt vänster. */
+/* text-indent tar ut luften som letter-spacing lägger efter sista bokstaven */
 .hero h1 {
   font-size: clamp(2rem, 10vw, 7rem);
   font-weight: 300;
@@ -117,8 +172,7 @@ h2 {
   justify-self: start;
 }
 
-/* Sektionen glider in när den kommer i vy. Klassen is-visible sätts av
-   IntersectionObserver i ProductSection. */
+/* is-visible sätts av IntersectionObserver i ProductSection */
 .product .product-image,
 .product .product-info {
   opacity: 0;
@@ -145,8 +199,7 @@ h2 {
   transition-delay: 0.15s;
 }
 
-/* Bildrutan är kvadratisk och lika stor i alla sektioner. Filerna är
-   normaliserade till 1200x1200, så motiven hamnar på samma plats varje gång. */
+/* Bilderna är normaliserade till 1200x1200, därför fast kvadrat */
 .product-image {
   position: relative;
   width: min(100%, 34rem);
@@ -180,8 +233,7 @@ h2 {
 .product[data-heat='4'] { --glow: #fb7c16; }
 .product[data-heat='5'] { --glow: #fb6406; }
 .product[data-heat='6'] { --glow: #fd4b06; }
-/* De fyra starkaste har nästan samma röda på etiketten. Glowen dämpas stegvis
-   istället, så den mörknar mot botten av skalan. */
+/* De fyra starkaste har nästan samma röda, så glowen dämpas i stället */
 .product[data-heat='7'] { --glow: #f62710; --glow-opacity: 0.44; }
 .product[data-heat='8'] { --glow: #f71c15; --glow-opacity: 0.37; }
 .product[data-heat='9'] { --glow: #f4020b; --glow-opacity: 0.30; }
@@ -335,9 +387,7 @@ h2 {
     max-width: min(100%, 50svh);
   }
 
-  /* Spalterna ligger på varandra här, så inglidningen kommer nerifrån. En
-     rörelse i sidled sköt ut sektionerna utanför skärmkanten och gjorde sidan
-     bredare än mobilen. */
+  /* Nerifrån här. I sidled sköt sektionerna ut utanför skärmkanten */
   .product-left .product-image,
   .product-right .product-image,
   .product-left .product-info,

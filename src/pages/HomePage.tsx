@@ -14,10 +14,10 @@ function HomePage() {
 
   return (
     <>
-      <header className="hero">
+      <section className="hero">
         <h1>Vikingsås</h1>
         <p>Släpp loss din inre viking</p>
-      </header>
+      </section>
 
       <main>
         {products.map((product, index) => (
