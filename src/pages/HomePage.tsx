@@ -16,7 +16,7 @@ function HomePage() {
     <>
       <header className="hero">
         <h1>Vikingsås</h1>
-        <p>Placeholder-text i väntan på något bättre</p>
+        <p>Släpp loss din inre viking</p>
       </header>
 
       <main>

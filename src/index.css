@@ -51,22 +51,42 @@ h2 {
   min-height: 100vh;
   min-height: 100svh;
   display: grid;
-  place-content: center;
+  place-content: end center;
   text-align: center;
-  padding: 2rem;
-  background: radial-gradient(circle at 50% 40%, rgba(239, 84, 23, 0.22), transparent 50%);
+  padding: 2rem 2rem clamp(3rem, 8vh, 6rem);
+  /* Vinjett ovanpå bilden. Mitten lämnas fri och kanterna går mot svart, så
+     motivet ramas in och texten längst ner får en mörk botten att stå mot.
+     Gradienten mäts mot hörnen, så skärmkanterna ligger på 70 procent. Svart
+     läggs därför redan där, annars blir kanterna gråa. */
+  background-image:
+    radial-gradient(ellipse at 50% 45%, transparent 5%, rgba(0, 0, 0, 1) 70%),
+    url('/img/hero.webp');
+  background-size: cover;
+  background-position: center;
 }
 
+/* Luften mellan bokstäverna bär titeln, inte storleken, så graden är nedskruvad
+   för att bredden ska bli ungefär densamma. Tonen är dämpad och lite grå, ren
+   vit lade sig ovanpå bilden istället för i den.
+
+   text-indent väger upp för att mellanrummet läggs efter varje bokstav, även
+   den sista. Utan den hamnar den centrerade texten en aning för långt vänster. */
 .hero h1 {
-  font-size: clamp(3rem, 12vw, 9rem);
-  letter-spacing: -0.03em;
+  font-size: clamp(2rem, 10vw, 7rem);
+  font-weight: 300;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
   text-transform: uppercase;
+  color: #cfc9c2;
 }
 
 .hero p {
-  color: var(--muted);
-  font-size: clamp(1rem, 2vw, 1.25rem);
-  margin-top: 1.5rem;
+  color: rgba(207, 201, 194, 0.6);
+  font-size: clamp(0.7rem, 1.5vw, 0.9rem);
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  text-transform: uppercase;
+  margin-top: 1.75rem;
 }
 
 /* En produkt per sektion, två spalter på desktop */
