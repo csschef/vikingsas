@@ -1,4 +1,4 @@
-import { ShoppingCartSimple } from '@phosphor-icons/react'
+import { ShoppingCartSimpleIcon } from '@phosphor-icons/react'
 import { Link } from 'react-router'
 import { useState, useEffect } from 'react'
 
@@ -21,7 +21,7 @@ function Header() {
       </Link>
       <nav className="site-nav">
         <Link to="/varukorg" className="nav-link">
-          <ShoppingCartSimple size={22} />
+          <ShoppingCartSimpleIcon size={22} />
         </Link>
       </nav>
     </header>
