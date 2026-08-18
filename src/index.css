@@ -253,6 +253,13 @@ h2 {
   mask-image: radial-gradient(ellipse at 50% 30%, #000, transparent 45%);
 }
 
+/* Egen nivå, annars suddar oskärpan på mobil även rubriken */
+.hero h1,
+.hero p {
+  position: relative;
+  z-index: 1;
+}
+
 /* text-indent tar ut luften som letter-spacing lägger efter sista bokstaven */
 .hero h1 {
   font-size: clamp(2rem, 10vw, 7rem);
@@ -508,9 +515,10 @@ h2 {
 @media (max-width: 800px) {
   .hero {
     background-image:
-      radial-gradient(ellipse at 40% 40%, transparent 45%, rgba(0, 0, 0, 1) 90%),
+      radial-gradient(ellipse at 50% 40%, transparent 50%, rgba(0, 0, 0, 1) 80%),
       url('/img/hero-mobile.webp');
   }
+
 
   .cart-item {
     grid-template-columns: 4rem 1fr auto;
