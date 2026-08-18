@@ -112,6 +112,7 @@ h2 {
 /* Startsidans hero */
 
 .hero {
+  position: relative;
   min-height: 100vh;
   min-height: 100svh;
   display: grid;
@@ -120,10 +121,18 @@ h2 {
   padding: 2rem 2rem clamp(3rem, 8vh, 6rem);
   /* 70% eftersom gradienten mäts mot hörnen, vid 100% blir kanterna gråa */
   background-image:
-    radial-gradient(ellipse at 50% 45%, transparent 5%, rgba(0, 0, 0, 1) 70%),
+    radial-gradient(ellipse at 50% 30%, transparent 8%, rgba(0, 0, 0, 1) 70%),
     url('/img/hero.webp');
   background-size: cover;
   background-position: center;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  backdrop-filter: brightness(1.25) saturate(1.2);
+  mask-image: radial-gradient(ellipse at 50% 30%, #000, transparent 45%);
 }
 
 /* text-indent tar ut luften som letter-spacing lägger efter sista bokstaven */
@@ -203,7 +212,7 @@ h2 {
 /* Bilderna är normaliserade till 1200x1200, därför fast kvadrat */
 .product-image {
   position: relative;
-  width: min(100%, 34rem);
+  width: min(70%, 34rem);
   max-width: min(100%, 70svh);
   aspect-ratio: 1;
   display: grid;
@@ -367,6 +376,12 @@ h2 {
 /* Mobil: bilden överst, texten under */
 
 @media (max-width: 800px) {
+  .hero {
+    background-image:
+      radial-gradient(ellipse at 40% 40%, transparent 45%, rgba(0, 0, 0, 1) 90%),
+      url('/img/hero-mobile.webp');
+  }
+
   .product {
     grid-template-columns: 1fr;
     gap: 2rem;
