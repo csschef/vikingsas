@@ -16,3 +16,12 @@ export type Product = {
   protein_g: string
   salt_g: string
 }
+
+export type CartItem = {
+  id: number
+  product_id: number
+  quantity: number
+  title: string
+  price: string
+  image_url: string
+}

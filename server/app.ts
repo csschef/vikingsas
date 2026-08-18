@@ -223,5 +223,36 @@ app.get('/api/cart', async (req, res) => {
   }
 })
 
+app.put('/api/cart/:id', async (req, res) => {
+  try {
+    const cartId = await getCartId(req.cookies.session_id)
+    const { quantity } = req.body
+
+    if (quantity < 1) {
+      const removed = await pool.query(
+        'DELETE FROM cart_items WHERE id = $1 AND cart_id = $2 RETURNING *',
+        [req.params.id, cartId]
+      )
+      if (removed.rows.length === 0) {
+        return res.status(404).json({ status: 'fel', error: 'Varan finns inte i varukorgen' })
+      }
+      return res.json({ cart_item: removed.rows[0] })
+    }
+
+    const result = await pool.query(
+      'UPDATE cart_items SET quantity = $1 WHERE id = $2 AND cart_id = $3 RETURNING *',
+      [quantity, req.params.id, cartId]
+    )
+    if (result.rows.length === 0) {
+      return res.status(404).json({ status: 'fel', error: 'Varan finns inte i varukorgen' })
+    }
+    res.json({ cart_item: result.rows[0] })
+  } catch (error) {
+    res.status(500).json({
+      status: 'fel',
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+})
 
 export default app
