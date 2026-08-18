@@ -53,8 +53,8 @@ Deadline 25 augusti 2026 21:59.
 | Produktinfo med beskrivning och näringsvärden |              2 | låg   | klar   |
 | Lägga i varukorg                              |              4 | medel | klar   |
 | Varukorgssida                                 |              3 | låg   | klar   |
-| Kassa med namn och e-post                     |              3 | låg   |        |
-| Orderbekräftelse                              |              1 | låg   |        |
+| Kassa med namn och e-post                     |              3 | låg   | klar   |
+| Orderbekräftelse                              |              1 | låg   | klar   |
 
 ## Deploy och testning
 
