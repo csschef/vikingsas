@@ -15,6 +15,12 @@
   box-sizing: border-box;
 }
 
+html {
+  /* Plats för rullningslisten alltid, annars hoppar sidan i sidled */
+  scrollbar-gutter: stable;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -94,6 +100,8 @@ h2 {
 .cart-page,
 .checkout-page,
 .thank-you-page {
+  max-width: 60rem;
+  margin: 0 auto;
   min-height: 100svh;
   padding: 8rem clamp(1.5rem, 5vw, 5rem) 4rem;
 }
@@ -107,6 +115,116 @@ h2 {
   text-transform: uppercase;
   color: #cfc9c2;
   margin-bottom: 1.5rem;
+}
+
+/* Varukorgen */
+
+.cart-list {
+  list-style: none;
+  margin: 0 0 2rem;
+  padding: 0;
+}
+
+.cart-item {
+  display: grid;
+  grid-template-columns: 5rem 1fr auto auto;
+  grid-template-areas:
+    'image title quantity sum'
+    'image price quantity sum';
+  align-items: center;
+  gap: 0.25rem 1.5rem;
+  padding: 1.5rem 0;
+  border-bottom: 1px dashed var(--line);
+}
+
+.cart-item-image {
+  grid-area: image;
+  width: 100%;
+}
+
+.cart-item-title {
+  grid-area: title;
+  align-self: end;
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cart-item-price {
+  grid-area: price;
+  align-self: start;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.cart-item-quantity {
+  grid-area: quantity;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.cart-item-quantity button {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s ease-out, color 0.2s ease-out;
+}
+
+.cart-item-quantity button:hover {
+  border-color: var(--glow);
+  color: var(--glow);
+}
+
+.cart-item-sum {
+  grid-area: sum;
+  min-width: 6rem;
+  margin: 0;
+  text-align: right;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.cart-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 1.5rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cart-total span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.button {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 1rem 2.25rem;
+  border-radius: 999px;
+  background: var(--glow);
+  color: #150a05;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: filter 0.2s ease-out;
+}
+
+.button:hover {
+  filter: brightness(1.15);
 }
 
 /* Startsidans hero */
@@ -361,6 +479,8 @@ h2 {
   color: #150a05;
   border: 0;
   border-radius: 999px;
+  /* Fast minsta bredd, annars krymper knappen när texten byts till Tillagd */
+  min-width: 16rem;
   padding: 1rem 2.25rem;
   font: inherit;
   font-weight: 700;
@@ -373,6 +493,16 @@ h2 {
   filter: brightness(1.15);
 }
 
+@keyframes pop {
+  40% {
+    transform: scale(1.08);
+  }
+}
+
+.product-info button.is-added {
+  animation: pop 0.35s ease-out;
+}
+
 /* Mobil: bilden överst, texten under */
 
 @media (max-width: 800px) {
@@ -380,6 +510,19 @@ h2 {
     background-image:
       radial-gradient(ellipse at 40% 40%, transparent 45%, rgba(0, 0, 0, 1) 90%),
       url('/img/hero-mobile.webp');
+  }
+
+  .cart-item {
+    grid-template-columns: 4rem 1fr auto;
+    grid-template-areas:
+      'image title title'
+      'image price price'
+      'image quantity sum';
+    gap: 0.25rem 1rem;
+  }
+
+  .cart-item-sum {
+    min-width: 0;
   }
 
   .product {
@@ -419,5 +562,9 @@ h2 {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+
+  .product-info button.is-added {
+    animation: none;
   }
 }
