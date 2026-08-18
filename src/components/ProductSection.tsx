@@ -27,6 +27,23 @@ function ProductSection({ product, index }: ProductSectionProps) {
     return () => observer.disconnect()
   }, [])
 
+  function addToCart() {
+    fetch('/api/cart', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ product_id: product.id, quantity: 1 }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log('Produkt tillagd i varukorgen:', data)
+      })
+      .catch((error) => {
+        console.error('Kunde inte lägga till produkt i varukorgen:', error)
+      })
+  }
+
   const side = index % 2 === 0 ? 'product-left' : 'product-right'
 
   return (
@@ -88,7 +105,9 @@ function ProductSection({ product, index }: ProductSectionProps) {
           </table>
         </details>
 
-        <button type="button">Lägg i varukorgen</button>
+        <button type="button" onClick={addToCart}>
+          Lägg i varukorgen
+        </button>
       </div>
     </section>
   )

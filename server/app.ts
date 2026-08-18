@@ -1,12 +1,32 @@
 import express from 'express'
 import { pool } from './db.js'
+import cookieParser from 'cookie-parser'
 
 // Appen lyssnar inte själv. Lokalt gör server/dev.ts det, i produktion
 // anropar Vercel den via api/index.ts.
 // Routes behöver /api-prefix eftersom Vercel skickar in hela sökvägen.
 const app = express()
-
+app.use(cookieParser())
 app.use(express.json())
+
+app.use((req, res, next) => {
+  if (!req.cookies.session_id) {
+    const sessionId = crypto.randomUUID()
+    res.cookie('session_id', sessionId, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 })
+    req.cookies.session_id = sessionId
+  }
+  next()
+})
+
+async function getCartId(sessionId: string) {
+  const result = await pool.query('SELECT id FROM carts WHERE session_id = $1', [sessionId])
+  if (result.rows.length > 0) {
+    return result.rows[0].id
+  } else {
+    const insertResult = await pool.query('INSERT INTO carts (session_id) VALUES ($1) RETURNING id', [sessionId])
+    return insertResult.rows[0].id
+  }
+}
 
 app.get('/api/health', async (_req, res) => {
   try {
@@ -154,5 +174,30 @@ app.delete('/api/products/:id', async (req, res) => {
     })
   }
 })
+
+app.post('/api/cart', async (req, res) => {
+  try {
+    const sessionId = req.cookies.session_id
+    if (!sessionId) {
+      return res.status(400).json({ status: 'fel', error: 'Ingen session' })
+    }
+    const cartId = await getCartId(sessionId)
+    const { product_id, quantity } = req.body
+    const result = await pool.query(
+      `INSERT INTO cart_items (cart_id, product_id, quantity)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (cart_id, product_id) DO UPDATE SET quantity = cart_items.quantity + EXCLUDED.quantity
+       RETURNING *`,
+      [cartId, product_id, quantity]
+    )
+    res.status(201).json({ cart_item: result.rows[0] })
+  } catch (error) {
+    res.status(500).json({
+      status: 'fel',
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+})
+
 
 export default app
