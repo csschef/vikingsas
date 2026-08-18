@@ -209,22 +209,128 @@ h2 {
   font-size: 0.9rem;
 }
 
-.button {
+.button,
+.checkout-page button {
   display: inline-block;
+  justify-self: start;
   margin-top: 1rem;
   padding: 1rem 2.25rem;
+  border: 0;
   border-radius: 999px;
   background: var(--glow);
   color: #150a05;
+  font: inherit;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   text-decoration: none;
+  cursor: pointer;
   transition: filter 0.2s ease-out;
 }
 
-.button:hover {
+.button:hover,
+.checkout-page button:hover {
   filter: brightness(1.15);
+}
+
+/* Kassan */
+
+.checkout-page form {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 28rem;
+}
+
+.checkout-page label {
+  display: grid;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Nollställer versalerna och luften som labeln annars ärver ner i fältet */
+.checkout-page input {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: rgba(246, 239, 232, 0.04);
+  color: var(--text);
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+  transition: border-color 0.2s ease-out;
+}
+
+.checkout-page input:focus {
+  outline: none;
+  border-color: var(--glow);
+}
+
+.checkout-layout {
+  display: grid;
+  grid-template-columns: 1fr 20rem;
+  align-items: start;
+  gap: 3rem;
+}
+
+.order-summary {
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  background: rgba(246, 239, 232, 0.03);
+}
+
+.order-summary h2 {
+  margin-bottom: 1rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.order-summary ul {
+  display: grid;
+  gap: 0.6rem;
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+
+.order-summary li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.95rem;
+}
+
+.order-summary li span:last-child {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.summary-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--line);
+  font-size: 1.25rem;
+}
+
+.summary-total span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.summary-vat {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
 }
 
 /* Startsidans hero */
@@ -253,7 +359,6 @@ h2 {
   mask-image: radial-gradient(ellipse at 50% 30%, #000, transparent 45%);
 }
 
-/* Egen nivå, annars suddar oskärpan på mobil även rubriken */
 .hero h1,
 .hero p {
   position: relative;
@@ -519,6 +624,11 @@ h2 {
       url('/img/hero-mobile.webp');
   }
 
+
+  .checkout-layout {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
 
   .cart-item {
     grid-template-columns: 4rem 1fr auto;
