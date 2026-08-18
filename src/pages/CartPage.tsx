@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CartItem } from '../types/types'
+import { Link } from 'react-router'
 
 function CartPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([])
@@ -39,13 +40,19 @@ function CartPage() {
         <p>Din varukorg är tom.</p>
       ) : (
         <>
-          <ul>
+          <ul className="cart-list">
             {cartItems.map((item) => (
-              <li key={item.id}>
-                <img src={item.image_url} alt={item.title} width="100" />
-                <h2>{item.title}</h2>
-                <p>Pris: {Number(item.price)} kr</p>
-                <p>
+              <li className="cart-item" key={item.id}>
+                <img
+                  className="cart-item-image"
+                  src={item.image_url}
+                  alt={item.title}
+                />
+                <h2 className="cart-item-title">{item.title}</h2>
+                <p className="cart-item-price">
+                  {Number(item.price)} kr per st
+                </p>
+                <p className="cart-item-quantity">
                   <button
                     type="button"
                     onClick={() => updateQuantity(item.id, item.quantity - 1)}
@@ -61,13 +68,19 @@ function CartPage() {
                   </button>
                 </p>
 
-                <p>Summa: {Number(item.price) * item.quantity} kr</p>
+                <p className="cart-item-sum">
+                  {Number(item.price) * item.quantity} kr
+                </p>
               </li>
             ))}
           </ul>
-          <p>
-            <strong>Totalt: {total} kr</strong>
+          <p className="cart-total">
+            <span>Totalt</span>
+            <strong>{total} kr</strong>
           </p>
+          <Link to="/kassa" className="button">
+            Gå till kassan
+          </Link>
         </>
       )}
     </main>
