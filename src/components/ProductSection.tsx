@@ -9,6 +9,7 @@ type ProductSectionProps = {
 function ProductSection({ product, index }: ProductSectionProps) {
   const sectionRef = useRef<HTMLElement>(null)
   const [visible, setVisible] = useState(false)
+  const [addedToCart, setAddedToCart] = useState(false)
 
   useEffect(() => {
     const element = sectionRef.current
@@ -38,6 +39,8 @@ function ProductSection({ product, index }: ProductSectionProps) {
       .then((res) => res.json())
       .then((data) => {
         console.log('Produkt tillagd i varukorgen:', data)
+        setAddedToCart(true)
+        setTimeout(() => setAddedToCart(false), 1000)
       })
       .catch((error) => {
         console.error('Kunde inte lägga till produkt i varukorgen:', error)
@@ -105,8 +108,12 @@ function ProductSection({ product, index }: ProductSectionProps) {
           </table>
         </details>
 
-        <button type="button" onClick={addToCart}>
-          Lägg i varukorgen
+        <button
+          type="button"
+          className={addedToCart ? 'is-added' : ''}
+          onClick={addToCart}
+        >
+          {addedToCart ? '✓ Tillagd' : 'Lägg i varukorgen'}
         </button>
       </div>
     </section>
