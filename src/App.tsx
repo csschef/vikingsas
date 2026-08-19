@@ -3,22 +3,29 @@ import HomePage from './pages/HomePage'
 import CheckoutPage from './pages/CheckoutPage'
 import ThankYouPage from './pages/ThankYouPage'
 import CartPage from './pages/CartPage'
-import Header from './components/Header'
+import SiteLayout from './components/SiteLayout'
+import AdminLayout from './components/AdminLayout'
+import AdminLoginPage from './pages/AdminLoginPage'
+import AdminDashboardPage from './pages/AdminDashboardPage'
 import { CartProvider } from './context/CartContext'
-import Footer from './components/Footer'
 
 function App() {
   return (
     <CartProvider>
       <Router>
-        <Header />
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/kassa" element={<CheckoutPage />} />
-          <Route path="/tack" element={<ThankYouPage />} />
-          <Route path="/varukorg" element={<CartPage />} />
+          <Route element={<SiteLayout />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/kassa" element={<CheckoutPage />} />
+            <Route path="/tack" element={<ThankYouPage />} />
+            <Route path="/varukorg" element={<CartPage />} />
+          </Route>
+
+          <Route path="/admin/logga-in" element={<AdminLoginPage />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboardPage />} />
+          </Route>
         </Routes>
-        <Footer />
       </Router>
     </CartProvider>
   )

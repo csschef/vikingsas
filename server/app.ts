@@ -94,6 +94,10 @@ function requireAuth(req: express.Request, res: express.Response, next: express.
 
 adminRouter.use(requireAuth)
 
+adminRouter.get('/me', (_req, res) => {
+  res.json({ status: 'ok' })
+})
+
 adminRouter.post('/api/products', async (req, res) => {
   try {
     const newProduct = await pool.query(

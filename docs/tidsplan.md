@@ -71,7 +71,7 @@ Görs efter att G är klart och deployat.
 | Uppgift                       | Tidsåtgång (h) | Risk  | Status |
 | ----------------------------- | -------------: | ----- | ------ |
 | Varukorgen sparas i databasen |              6 | medel | klar   |
-| Inloggning för admin          |              8 | medel |        |
+| Inloggning för admin          |              8 | medel | klar   |
 | Orderstatus i adminvyn        |              3 | låg   |        |
 
 ## Summering
