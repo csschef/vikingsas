@@ -1,6 +1,14 @@
 import express from 'express'
 import { pool } from './db.js'
 import cookieParser from 'cookie-parser'
+import session from 'express-session'
+import connectPgSimple from 'connect-pg-simple'
+import bcrypt from 'bcryptjs'
+declare module 'express-session' {
+  interface SessionData {
+    userId: number
+  }
+}
 
 // Appen lyssnar inte själv. Lokalt gör server/dev.ts det, i produktion
 // anropar Vercel den via api/index.ts.
@@ -8,6 +16,22 @@ import cookieParser from 'cookie-parser'
 const app = express()
 app.use(cookieParser())
 app.use(express.json())
+
+const PgSession = connectPgSimple(session)
+
+app.use(session({
+  store: new PgSession({ pool, createTableIfMissing: true }),
+  secret: process.env.SESSION_SECRET!,
+  name: 'admin_session',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 24 * 60 * 60 * 1000,
+  },
+}))
+
 
 app.use((req, res, next) => {
   if (!req.cookies.session_id) {
@@ -28,31 +52,49 @@ async function getCartId(sessionId: string) {
   }
 }
 
-app.get('/api/health', async (_req, res) => {
+const adminRouter = express.Router()
+
+adminRouter.post('/login', async (req, res) => {
   try {
-    const result = await pool.query('SELECT count(*) FROM products')
-    res.json({ status: 'ok', products: Number(result.rows[0].count) })
+    const { email, password } = req.body
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email])
+    const user = result.rows[0]
+
+    if (!user) {
+      return res.status(401).json({ status: 'fel', error: 'Fel e-post eller lösenord' })
+    }
+
+    const passwordMatches = await bcrypt.compare(password, user.password_hash)
+    if (!passwordMatches) {
+      return res.status(401).json({ status: 'fel', error: 'Fel e-post eller lösenord'})
+    }
+
+    req.session.userId = user.id
+    res.json({ email: user.email})
   } catch (error) {
     res.status(500).json({
       status: 'fel',
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     })
   }
 })
 
-app.get('/api/products', async (_req, res) => {
-  try {
-    const products = await pool.query('SELECT * FROM products WHERE is_active = true ORDER BY heat_level')
-    res.json({ products: products.rows })
-  } catch (error) {
-    res.status(500).json({
-      status: 'fel',
-      error: error instanceof Error ? error.message : String(error)
-    })
-  }
+adminRouter.post('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.json({ status: 'ok' })
+  })
 })
 
-app.post('/api/products', async (req, res) => {
+function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  if (!req.session.userId) {
+    return res.status(401).json({ status: 'fel', error: 'Inte inloggad' })
+  }
+  next()
+}
+
+adminRouter.use(requireAuth)
+
+adminRouter.post('/api/products', async (req, res) => {
   try {
     const newProduct = await pool.query(
       `INSERT INTO products (
@@ -101,7 +143,7 @@ app.post('/api/products', async (req, res) => {
   }
 })
 
-app.put('/api/products/:id', async (req, res) => {
+adminRouter.put('/api/products/:id', async (req, res) => {
   try {
     const updatedProduct = await pool.query(
       `UPDATE products SET
@@ -156,7 +198,7 @@ app.put('/api/products/:id', async (req, res) => {
 // En produkt raderas inte från databasen, utan markeras som inaktiv.
 // På så sätt kan vi behålla historik och undvika problem med ordrar som refererar
 // till produkter som inte längre finns.
-app.delete('/api/products/:id', async (req, res) => {
+adminRouter.delete('/api/products/:id', async (req, res) => {
   try {
     const deletedProduct = await pool.query(
       'UPDATE products SET is_active = false WHERE id = $1 RETURNING *',
@@ -168,6 +210,32 @@ app.delete('/api/products/:id', async (req, res) => {
     res.json({ product: deletedProduct.rows[0] })
   }
   catch (error) {
+    res.status(500).json({
+      status: 'fel',
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+})
+
+app.use('/api/admin', adminRouter)
+
+app.get('/api/health', async (_req, res) => {
+  try {
+    const result = await pool.query('SELECT count(*) FROM products')
+    res.json({ status: 'ok', products: Number(result.rows[0].count) })
+  } catch (error) {
+    res.status(500).json({
+      status: 'fel',
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+})
+
+app.get('/api/products', async (_req, res) => {
+  try {
+    const products = await pool.query('SELECT * FROM products WHERE is_active = true ORDER BY heat_level')
+    res.json({ products: products.rows })
+  } catch (error) {
     res.status(500).json({
       status: 'fel',
       error: error instanceof Error ? error.message : String(error)

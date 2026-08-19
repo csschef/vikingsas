@@ -12,16 +12,22 @@
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
+    "bcryptjs": "^3.0.3",
+    "connect-pg-simple": "^10.0.0",
     "cookie-parser": "^1.4.7",
     "express": "^5.1.0",
+    "express-session": "^1.19.0",
     "pg": "^8.23.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router": "^8.3.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/connect-pg-simple": "^7.0.3",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
+    "@types/express-session": "^1.19.0",
     "@types/node": "^24.13.3",
     "@types/pg": "^8.21.0",
     "@types/react": "^19.2.17",
