@@ -5,6 +5,7 @@ import ThankYouPage from './pages/ThankYouPage'
 import CartPage from './pages/CartPage'
 import Header from './components/Header'
 import { CartProvider } from './context/CartContext'
+import Footer from './components/Footer'
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <Route path="/tack" element={<ThankYouPage />} />
           <Route path="/varukorg" element={<CartPage />} />
         </Routes>
+        <Footer />
       </Router>
     </CartProvider>
   )
