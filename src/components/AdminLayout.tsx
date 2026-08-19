@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Outlet, useNavigate } from 'react-router'
+import { Outlet, useNavigate, Link } from 'react-router'
 
 function AdminLayout() {
   const [checking, setChecking] = useState(true)
@@ -31,9 +31,12 @@ function AdminLayout() {
     <div className="admin-layout">
       <nav className="admin-nav">
         <span>Adminpanel</span>
-        <button type="button" onClick={handleLogout}>
-          Logga ut
-        </button>
+        <div className="admin-nav-links">
+          <Link to="/admin/produkter">Produkter</Link>
+          <button type="button" onClick={handleLogout}>
+            Logga ut
+          </button>
+        </div>
       </nav>
       <Outlet />
     </div>

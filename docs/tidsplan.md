@@ -37,11 +37,11 @@ Deadline 25 augusti 2026 21:59.
 
 | Uppgift          | Tidsåtgång (h) | Risk | Status |
 | ---------------- | -------------: | ---- | ------ |
-| Översiktssida    |              3 | låg  |        |
-| Produktlista     |              2 | låg  |        |
-| Skapa produkt    |              4 | låg  |        |
-| Redigera produkt |              2 | låg  |        |
-| Ta bort produkt  |              1 | låg  |        |
+| Översiktssida    |              3 | låg  | klar   |
+| Produktlista     |              2 | låg  | klar   |
+| Skapa produkt    |              4 | låg  | klar   |
+| Redigera produkt |              2 | låg  | klar   |
+| Ta bort produkt  |              1 | låg  | klar   |
 | Orderöversikt    |              3 | låg  |        |
 | Visa order       |              2 | låg  |        |
 

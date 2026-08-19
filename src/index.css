@@ -769,6 +769,25 @@ h2 {
   color: #cfc9c2;
 }
 
+.admin-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.admin-nav-links a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: color 0.2s ease-out;
+}
+
+.admin-nav-links a:hover {
+  color: var(--glow);
+}
+
 .admin-nav button {
   padding: 0.6rem 1.5rem;
   border: 1px solid var(--line);
@@ -788,17 +807,176 @@ h2 {
   color: var(--glow);
 }
 
-.admin-dashboard-page {
+.admin-dashboard-page,
+.admin-products-page {
   padding: 3rem clamp(1.5rem, 5vw, 3rem);
 }
 
-.admin-dashboard-page h1 {
+.admin-dashboard-page h1,
+.admin-products-page h1 {
   font-size: clamp(1.75rem, 4vw, 2.5rem);
   font-weight: 300;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #cfc9c2;
   margin-bottom: 1rem;
+}
+
+.admin-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.admin-page-header h1 {
+  margin-bottom: 0;
+}
+
+.admin-page-header .button {
+  margin-top: 0;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-table th {
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+.admin-table-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-table-actions a {
+  color: var(--glow);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.admin-table-actions a:hover {
+  text-decoration: underline;
+}
+
+.admin-table-actions button {
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease-out, color 0.2s ease-out;
+}
+
+.admin-table-actions button:hover {
+  border-color: #f4020b;
+  color: #f4020b;
+}
+
+.admin-product-form-page {
+  padding: 3rem clamp(1.5rem, 5vw, 3rem);
+}
+
+.admin-product-form-page h1 {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #cfc9c2;
+  margin-bottom: 2rem;
+}
+
+.admin-product-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1.5rem;
+  max-width: 60rem;
+}
+
+.admin-product-form label {
+  display: grid;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-product-form label:has(textarea) {
+  grid-column: 1 / -1;
+}
+
+.admin-product-form input,
+.admin-product-form textarea {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: rgba(246, 239, 232, 0.04);
+  color: var(--text);
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+  transition: border-color 0.2s ease-out;
+}
+
+.admin-product-form textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+.admin-product-form input:focus,
+.admin-product-form textarea:focus {
+  outline: none;
+  border-color: var(--glow);
+}
+
+.admin-product-form label.admin-form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-form-checkbox input {
+  width: 1.2rem;
+  height: 1.2rem;
+  accent-color: var(--glow);
+}
+
+.admin-product-form button {
+  grid-column: 1 / -1;
+  justify-self: start;
+  padding: 1rem 2.25rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--glow);
+  color: #150a05;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: filter 0.2s ease-out;
+}
+
+.admin-product-form button:hover {
+  filter: brightness(1.15);
 }
 
 /* Mobil: bilden överst, texten under */

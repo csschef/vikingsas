@@ -8,6 +8,8 @@ import AdminLayout from './components/AdminLayout'
 import AdminLoginPage from './pages/AdminLoginPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import { CartProvider } from './context/CartContext'
+import AdminProductsPage from './pages/AdminProductsPage'
+import AdminProductFormPage from './pages/AdminProductFormPage'
 
 function App() {
   return (
@@ -24,6 +26,9 @@ function App() {
           <Route path="/admin/logga-in" element={<AdminLoginPage />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboardPage />} />
+            <Route path="produkter" element={<AdminProductsPage />} />
+            <Route path="produkter/ny" element={<AdminProductFormPage />} />
+            <Route path="produkter/:id" element={<AdminProductFormPage />} />
           </Route>
         </Routes>
       </Router>

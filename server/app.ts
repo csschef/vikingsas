@@ -192,8 +192,9 @@ adminRouter.put('/products/:id', async (req, res) => {
       carbohydrate_g = $12,
       sugars_g = $13,
       protein_g = $14,
-      salt_g = $15
-      WHERE id = $16
+      salt_g = $15,
+      is_active = $16
+      WHERE id = $17
       RETURNING *`,
       [
         req.body.title,
@@ -211,6 +212,7 @@ adminRouter.put('/products/:id', async (req, res) => {
         req.body.sugars_g,
         req.body.protein_g,
         req.body.salt_g,
+        req.body.is_active,
         req.params.id
       ]
     )

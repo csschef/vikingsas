@@ -15,6 +15,7 @@ export type Product = {
   sugars_g: string
   protein_g: string
   salt_g: string
+  is_active: boolean
 }
 
 export type CartItem = {
