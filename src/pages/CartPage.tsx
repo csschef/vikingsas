@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useContext } from 'react'
 import type { CartItem } from '../types/types'
 import { Link } from 'react-router'
+import { CartContext } from '../context/CartContext'
 
 function CartPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const { refreshCount } = useContext(CartContext)
 
   function loadCart() {
     fetch('/api/cart')
@@ -20,7 +22,10 @@ function CartPage() {
       },
       body: JSON.stringify({ quantity }),
     })
-      .then(() => loadCart())
+      .then(() => {
+        loadCart()
+        refreshCount()
+      })
       .catch((error) => console.error('Kunde inte uppdatera kvantitet', error))
   }
 

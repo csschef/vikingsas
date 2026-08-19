@@ -1,5 +1,6 @@
 import type { Product } from '../types/types'
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useContext } from 'react'
+import { CartContext } from '../context/CartContext'
 
 type ProductSectionProps = {
   product: Product
@@ -10,6 +11,7 @@ function ProductSection({ product, index }: ProductSectionProps) {
   const sectionRef = useRef<HTMLElement>(null)
   const [visible, setVisible] = useState(false)
   const [addedToCart, setAddedToCart] = useState(false)
+  const { refreshCount } = useContext(CartContext)
 
   useEffect(() => {
     const element = sectionRef.current
@@ -41,6 +43,7 @@ function ProductSection({ product, index }: ProductSectionProps) {
         console.log('Produkt tillagd i varukorgen:', data)
         setAddedToCart(true)
         setTimeout(() => setAddedToCart(false), 1000)
+        refreshCount()
       })
       .catch((error) => {
         console.error('Kunde inte lägga till produkt i varukorgen:', error)

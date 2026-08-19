@@ -1,9 +1,11 @@
 import { ShoppingCartSimpleIcon } from '@phosphor-icons/react'
 import { Link } from 'react-router'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
+import { CartContext } from '../context/CartContext'
 
 function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
+  const { count } = useContext(CartContext)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -22,6 +24,7 @@ function Header() {
       <nav className="site-nav">
         <Link to="/varukorg" className="nav-link">
           <ShoppingCartSimpleIcon size={22} />
+          {count > 0 && <span className="cart-count">{count}</span>}
         </Link>
       </nav>
     </header>
