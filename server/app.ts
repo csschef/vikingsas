@@ -98,7 +98,7 @@ adminRouter.get('/me', (_req, res) => {
   res.json({ status: 'ok' })
 })
 
-adminRouter.post('/api/products', async (req, res) => {
+adminRouter.post('/products', async (req, res) => {
   try {
     const newProduct = await pool.query(
       `INSERT INTO products (
@@ -147,7 +147,7 @@ adminRouter.post('/api/products', async (req, res) => {
   }
 })
 
-adminRouter.put('/api/products/:id', async (req, res) => {
+adminRouter.put('/products/:id', async (req, res) => {
   try {
     const updatedProduct = await pool.query(
       `UPDATE products SET
@@ -202,7 +202,7 @@ adminRouter.put('/api/products/:id', async (req, res) => {
 // En produkt raderas inte från databasen, utan markeras som inaktiv.
 // På så sätt kan vi behålla historik och undvika problem med ordrar som refererar
 // till produkter som inte längre finns.
-adminRouter.delete('/api/products/:id', async (req, res) => {
+adminRouter.delete('/products/:id', async (req, res) => {
   try {
     const deletedProduct = await pool.query(
       'UPDATE products SET is_active = false WHERE id = $1 RETURNING *',
