@@ -98,6 +98,33 @@ adminRouter.get('/me', (_req, res) => {
   res.json({ status: 'ok' })
 })
 
+adminRouter.get('/products', async (_req, res) => {
+  try {
+    const products = await pool.query('SELECT * FROM products ORDER BY heat_level')
+    res.json({ products: products.rows })
+  } catch (error) {
+    res.status(500).json({
+      status: 'fel',
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+})
+
+adminRouter.get('/products/:id', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM products WHERE id = $1', [req.params.id])
+    if (result.rows.length === 0) {
+      return res.status(404).json({ status: 'fel', error: 'Produkten finns inte' })
+    }
+    res.json({ product: result.rows[0] })
+  } catch (error) {
+    res.status(500).json({
+      status: 'fel',
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+})
+
 adminRouter.post('/products', async (req, res) => {
   try {
     const newProduct = await pool.query(
