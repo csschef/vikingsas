@@ -30,8 +30,8 @@ Deadline 25 augusti 2026 21:59.
 | Redigera produkt   |              2 | låg   | klar   | ½           |
 | Ta bort produkt    |              1 | låg   | klar   | ½           |
 | Skapa order        |              3 | medel | klar   | 1           |
-| Lista ordrar       |              2 | låg   |        |             |
-| Visa enskild order |              1 | låg   |        |             |
+| Lista ordrar       |              2 | låg   | klar   | ½           |
+| Visa enskild order |              1 | låg   | klar   | ½           |
 
 ## Adminsidor
 
@@ -42,8 +42,8 @@ Deadline 25 augusti 2026 21:59.
 | Skapa produkt    |              4 | låg  | klar   | 1 ½         |
 | Redigera produkt |              2 | låg  | klar   | 1 ½         |
 | Ta bort produkt  |              1 | låg  | klar   | 1           |
-| Orderöversikt    |              3 | låg  |        |             |
-| Visa order       |              2 | låg  |        |             |
+| Orderöversikt    |              3 | låg  | klar   |             |
+| Visa order       |              2 | låg  | klar   |             |
 
 ## Kundsidor
 
