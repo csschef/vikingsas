@@ -11,6 +11,7 @@ import { CartProvider } from './context/CartContext'
 import AdminProductsPage from './pages/AdminProductsPage'
 import AdminProductFormPage from './pages/AdminProductFormPage'
 import AdminOrdersPage from './pages/AdminOrdersPage'
+import AdminOrderDetailPage from './pages/AdminOrderDetailPage'
 
 function App() {
   return (
@@ -31,6 +32,10 @@ function App() {
             <Route path="produkter/ny" element={<AdminProductFormPage />} />
             <Route path="produkter/:id" element={<AdminProductFormPage />} />
             <Route path="bestallningar" element={<AdminOrdersPage />} />
+            <Route
+              path="bestallningar/:id"
+              element={<AdminOrderDetailPage />}
+            />
           </Route>
         </Routes>
       </Router>

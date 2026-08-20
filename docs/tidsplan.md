@@ -10,7 +10,7 @@ Deadline 25 augusti 2026 21:59.
 | Research och beslut om typ av E-handel |              2 | låg   | klar   | 1           |
 | Tidsplan och sitemap                   |              3 | låg   | klar   | 2           |
 | ER-diagram                             |              3 | låg   | klar   | 1 ½         |
-| Grundläggande CSS                      |             12 | medel |        | 6           |
+| Grundläggande CSS                      |             12 | medel | klar   | 7           |
 
 ## Databas
 
@@ -42,8 +42,8 @@ Deadline 25 augusti 2026 21:59.
 | Skapa produkt    |              4 | låg  | klar   | 1 ½         |
 | Redigera produkt |              2 | låg  | klar   | 1 ½         |
 | Ta bort produkt  |              1 | låg  | klar   | 1           |
-| Orderöversikt    |              3 | låg  | klar   |             |
-| Visa order       |              2 | låg  | klar   |             |
+| Orderöversikt    |              3 | låg  | klar   | 1           |
+| Visa order       |              2 | låg  | klar   | 1           |
 
 ## Kundsidor
 
@@ -81,7 +81,7 @@ Görs efter att G är klart och deployat.
 | ----------------------------- | -------------: | ----- | ------ | ----------- |
 | Varukorgen sparas i databasen |              6 | medel | klar   | 2           |
 | Inloggning för admin          |              8 | medel | klar   | 3           |
-| Orderstatus i adminvyn        |              3 | låg   |        |             |
+| Orderstatus i adminvyn        |              3 | låg   | klar   | 1           |
 
 ## Summering
 

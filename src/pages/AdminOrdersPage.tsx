@@ -1,12 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import type { Order } from '../types/types'
-import { formatCurrency } from '../utils/format'
-
-const orderDateFormatter = new Intl.DateTimeFormat('sv-SE', {
-  dateStyle: 'long',
-  timeStyle: 'short',
-})
+import { formatCurrency, formatOrderDate } from '../utils/format'
 
 function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
@@ -41,7 +36,7 @@ function AdminOrdersPage() {
         <tbody>
           {orders.map((order) => (
             <tr key={order.id}>
-              <td>{orderDateFormatter.format(new Date(order.created_at))}</td>
+              <td>{formatOrderDate(order.created_at)}</td>
               <td>{order.customer_name}</td>
               <td>{order.customer_email}</td>
               <td>{formatCurrency(order.total_amount)}</td>
