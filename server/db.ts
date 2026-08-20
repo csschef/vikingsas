@@ -1,7 +1,7 @@
 import { Pool } from 'pg'
 
 if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL is not defined in the environment variables. Copy .env.example file and add it to your .env and set the DATABASE_URL variable.')
+  throw new Error('DATABASE_URL är inte definierad i miljövariablerna. Kopiera filen .env.example till .env och ange variabeln DATABASE_URL där.')
 }
 
 export const pool = new Pool({

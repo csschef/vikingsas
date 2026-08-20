@@ -40,8 +40,7 @@ function ProductSection({ product, index }: ProductSectionProps) {
       body: JSON.stringify({ product_id: product.id, quantity: 1 }),
     })
       .then((res) => res.json())
-      .then((data) => {
-        console.log('Produkt tillagd i varukorgen:', data)
+      .then(() => {
         setAddedToCart(true)
         setTimeout(() => setAddedToCart(false), 1000)
         refreshCount()

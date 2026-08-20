@@ -126,6 +126,13 @@ h2 {
   padding: 8rem clamp(1.5rem, 5vw, 5rem) 4rem;
 }
 
+.order-number {
+  color: var(--glow);
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
 .cart-page h1,
 .checkout-page h1,
 .thank-you-page h1 {
@@ -147,10 +154,10 @@ h2 {
 
 .cart-item {
   display: grid;
-  grid-template-columns: 5rem 1fr auto auto;
+  grid-template-columns: 5rem 1fr auto auto auto;
   grid-template-areas:
-    'image title quantity sum'
-    'image price quantity sum';
+    'image title quantity sum remove'
+    'image price quantity sum remove';
   align-items: center;
   gap: 0.25rem 1.5rem;
   padding: 1.5rem 0;
@@ -213,6 +220,24 @@ h2 {
   font-size: 1.1rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.cart-item-remove {
+  grid-area: remove;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s ease-out;
+}
+
+.cart-item-remove:hover {
+  color: #f4020b;
 }
 
 .cart-total {
@@ -826,7 +851,6 @@ h2 {
   background: #c9020a;
 }
 
-.admin-dashboard-page,
 .admin-products-page,
 .admin-orders-page,
 .admin-order-detail-page {
@@ -838,7 +862,6 @@ h2 {
   margin-inline: auto;
 }
 
-.admin-dashboard-page h1,
 .admin-products-page h1,
 .admin-orders-page h1,
 .admin-order-detail-page h1 {
@@ -872,14 +895,66 @@ h2 {
   color: var(--bg);
 }
 
-.admin-page-header select {
-  padding: 0.6rem 1rem;
-  border: 1px solid var(--line);
-  border-radius: 0.4rem;
-  background: #fff;
-  color: var(--text);
+.status-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.status-dropdown-trigger,
+.status-dropdown-list button {
+  border: none;
   font: inherit;
-  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.status-dropdown-trigger {
+  transition: filter 0.15s ease-out;
+}
+
+.status-dropdown-trigger.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 1rem;
+  font-size: 0.8rem;
+}
+
+.status-dropdown-trigger:hover {
+  filter: brightness(0.95);
+}
+
+.status-dropdown-trigger svg {
+  display: block;
+  color: currentColor;
+  opacity: 0.7;
+}
+
+.status-dropdown-list {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 10;
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.6rem;
+  list-style: none;
+  min-width: 10rem;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.12);
+}
+
+.status-dropdown-list button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  transition: filter 0.15s ease-out;
+}
+
+.status-dropdown-list button:hover {
+  filter: brightness(0.95);
 }
 
 .admin-order-card {
@@ -1100,18 +1175,6 @@ h2 {
   border-color: var(--glow);
 }
 
-.admin-product-form label.admin-form-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.admin-form-checkbox input {
-  width: 1.2rem;
-  height: 1.2rem;
-  accent-color: var(--glow);
-}
-
 .admin-product-form button {
   grid-column: 1 / -1;
   justify-self: start;
@@ -1149,11 +1212,11 @@ h2 {
   }
 
   .cart-item {
-    grid-template-columns: 4rem 1fr auto;
+    grid-template-columns: 4rem 1fr auto auto;
     grid-template-areas:
-      'image title title'
-      'image price price'
-      'image quantity sum';
+      'image title title title'
+      'image price price price'
+      'image quantity sum remove';
     gap: 0.25rem 1rem;
   }
 

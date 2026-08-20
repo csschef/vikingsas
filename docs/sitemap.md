@@ -17,10 +17,10 @@ Ingen egen detaljsida per produkt, eftersom det inte är ett krav. Beskrivningen
 
 | Adress | Sida | Innehåll |
 | --- | --- | --- |
-| `/admin` | Översikt | Ingång till produkter och ordrar. |
-| `/admin/produkter` | Produktlista | Alla produkter med knappar för att redigera och ta bort. |
+| `/admin` | Redirect | Skickar vidare till `/admin/ordrar`. |
+| `/admin/produkter` | Produktlista | Alla produkter med en switch för att aktivera/inaktivera och en knapp för att redigera. |
 | `/admin/produkter/ny` | Skapa produkt | Formulär med titel, beskrivning, volym, pris, chilistyrka, bildadress, ingredienser och de åtta näringsvärdena. |
-| `/admin/produkter/:id/redigera` | Redigera produkt | Samma formulär, ifyllt. |
+| `/admin/produkter/:id` | Redigera produkt | Samma formulär, ifyllt. |
 | `/admin/ordrar` | Orderöversikt | Alla ordrar med kund, datum och summa. |
 | `/admin/ordrar/:id` | Visa order | En order med alla rader, priser och totalsumma. |
 
@@ -28,5 +28,5 @@ Ingen egen detaljsida per produkt, eftersom det inte är ett krav. Beskrivningen
 
 | Adress | Sida | Innehåll |
 | --- | --- | --- |
-| `/admin/login` | Inloggning | Endast administratörer kommer åt adminsidorna. |
+| `/admin/logga-in` | Inloggning | Endast administratörer kommer åt adminsidorna. |
 
