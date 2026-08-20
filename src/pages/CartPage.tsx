@@ -1,6 +1,7 @@
 import { useEffect, useState, useContext } from 'react'
 import type { CartItem } from '../types/types'
 import { Link } from 'react-router'
+import { TrashIcon } from '@phosphor-icons/react'
 import { CartContext } from '../context/CartContext'
 import { formatCurrency } from '../utils/format'
 
@@ -77,6 +78,14 @@ function CartPage() {
                 <p className="cart-item-sum">
                   {formatCurrency(Number(item.price) * item.quantity)}
                 </p>
+                <button
+                  type="button"
+                  className="cart-item-remove"
+                  onClick={() => updateQuantity(item.id, 0)}
+                  aria-label={`Ta bort ${item.title}`}
+                >
+                  <TrashIcon size={18} />
+                </button>
               </li>
             ))}
           </ul>

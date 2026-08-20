@@ -1,13 +1,15 @@
-import { useEffect, useState, type SubmitEvent } from 'react'
+import { useEffect, useState, useContext, type SubmitEvent } from 'react'
 import { useNavigate } from 'react-router'
 import type { CartItem } from '../types/types'
 import { formatCurrency } from '../utils/format'
+import { CartContext } from '../context/CartContext'
 
 function CheckoutPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const navigate = useNavigate()
   const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const { refreshCount } = useContext(CartContext)
 
   useEffect(() => {
     fetch('/api/cart')
@@ -34,8 +36,8 @@ function CheckoutPage() {
     })
       .then((res) => res.json())
       .then((data) => {
-        console.log('Order skapad', data)
-        navigate('/tack')
+        refreshCount()
+        navigate(`/tack?order=${data.order_id}`)
       })
       .catch((error) => console.error('Kunde inte skapa order', error))
   }

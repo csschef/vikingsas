@@ -3,6 +3,7 @@ import { useParams } from 'react-router'
 import type { Order } from '../types/types'
 import { formatCurrency } from '../utils/format'
 import { formatOrderDate } from '../utils/format'
+import StatusDropdown from '../components/StatusDropdown'
 
 function AdminOrderDetailPage() {
   const { id } = useParams()
@@ -42,15 +43,7 @@ function AdminOrderDetailPage() {
     <main className="admin-order-detail-page">
       <div className="admin-page-header">
         <h1>Order #{order.id}</h1>
-        <select
-          value={order.status}
-          onChange={(e) => changeOrderStatus(e.target.value as Order['status'])}
-        >
-          <option value="Beställd">Beställd</option>
-          <option value="Behandlas">Behandlas</option>
-          <option value="Levererad">Levererad</option>
-          <option value="Återbetald">Återbetald</option>
-        </select>
+        <StatusDropdown value={order.status} onChange={changeOrderStatus} />
       </div>
       <div className="admin-order-card">
         <div className="admin-order-info">
