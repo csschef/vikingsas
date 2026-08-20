@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router'
 import HomePage from './pages/HomePage'
 import CheckoutPage from './pages/CheckoutPage'
 import ThankYouPage from './pages/ThankYouPage'
@@ -6,7 +6,6 @@ import CartPage from './pages/CartPage'
 import SiteLayout from './components/SiteLayout'
 import AdminLayout from './components/AdminLayout'
 import AdminLoginPage from './pages/AdminLoginPage'
-import AdminDashboardPage from './pages/AdminDashboardPage'
 import { CartProvider } from './context/CartContext'
 import AdminProductsPage from './pages/AdminProductsPage'
 import AdminProductFormPage from './pages/AdminProductFormPage'
@@ -27,7 +26,7 @@ function App() {
 
           <Route path="/admin/logga-in" element={<AdminLoginPage />} />
           <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboardPage />} />
+            <Route index element={<Navigate to="/admin/ordrar" replace />} />
             <Route path="produkter" element={<AdminProductsPage />} />
             <Route path="produkter/ny" element={<AdminProductFormPage />} />
             <Route path="produkter/:id" element={<AdminProductFormPage />} />

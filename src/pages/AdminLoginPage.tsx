@@ -20,7 +20,7 @@ function AdminLoginPage() {
         if (!res.ok) {
           throw new Error('Fel e-post eller lösenord')
         }
-        navigate('/admin')
+        navigate('/admin/ordrar')
       })
       .catch(() => {
         setError('Fel e-post eller lösenord')

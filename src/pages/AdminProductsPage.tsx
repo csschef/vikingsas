@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { CaretRightIcon } from '@phosphor-icons/react'
 import type { Product } from '../types/types'
 import { formatCurrency } from '../utils/format'
+import Switch from '../components/Switch'
 
 function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -50,6 +52,7 @@ function AdminProductsPage() {
             <th>Styrka</th>
             <th>Pris</th>
             <th>Status</th>
+            <th>Aktiv / Inaktiv</th>
             <th></th>
           </tr>
         </thead>
@@ -70,14 +73,22 @@ function AdminProductsPage() {
                   {product.is_active ? 'Aktiv' : 'Inaktiv'}
                 </span>
               </td>
+              <td>
+                <Switch
+                  checked={product.is_active}
+                  onChange={() => toggleProductStatus(product)}
+                  label={
+                    product.is_active
+                      ? `Inaktivera ${product.title}`
+                      : `Aktivera ${product.title}`
+                  }
+                />
+              </td>
               <td className="admin-table-actions">
-                <Link to={`/admin/produkter/${product.id}`}>Redigera</Link>
-                <button
-                  type="button"
-                  onClick={() => toggleProductStatus(product)}
-                >
-                  {product.is_active ? 'Inaktivera' : 'Aktivera'}
-                </button>
+                <Link to={`/admin/produkter/${product.id}`}>
+                  Redigera
+                  <CaretRightIcon size={14} weight="bold" />
+                </Link>
               </td>
             </tr>
           ))}

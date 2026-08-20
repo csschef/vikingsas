@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { CaretRightIcon } from '@phosphor-icons/react'
 import type { Order } from '../types/types'
 import { formatCurrency, formatOrderDate } from '../utils/format'
 
@@ -32,7 +33,7 @@ function AdminOrdersPage() {
       <table className="admin-table">
         <thead>
           <tr>
-            <th>Inkom</th>
+            <th>DAtum</th>
             <th>Kund</th>
             <th>Email</th>
             <th>Summa</th>
@@ -53,8 +54,9 @@ function AdminOrdersPage() {
                 </span>
               </td>
               <td className="admin-table-actions">
-                <Link to={`/admin/ordrar/${order.id}`} type="button">
+                <Link to={`/admin/ordrar/${order.id}`}>
                   Detaljer
+                  <CaretRightIcon size={14} weight="bold" />
                 </Link>
               </td>
             </tr>
