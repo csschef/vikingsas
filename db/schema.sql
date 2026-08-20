@@ -55,3 +55,5 @@ CREATE TABLE users (
   password_hash TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE orders ADD COLUMN status TEXT NOT NULL DEFAULT 'Beställd' CHECK (status IN ('Beställd', 'Behandlas', 'Levererad', 'Återbetald'));
