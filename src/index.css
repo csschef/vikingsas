@@ -673,6 +673,12 @@ h2 {
 }
 
 .admin-login-page {
+  --bg: #f4f4f2;
+  --text: #2a2a2a;
+  --muted: rgba(42, 42, 42, 0.6);
+  --line: rgba(42, 42, 42, 0.15);
+  position: relative;
+  z-index: 3;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
@@ -680,6 +686,8 @@ h2 {
   justify-content: center;
   gap: 1.5rem;
   padding: 2rem;
+  background: var(--bg);
+  color: var(--text);
 }
 
 .admin-login-page h1 {
@@ -687,7 +695,7 @@ h2 {
   font-weight: 300;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #cfc9c2;
+  color: var(--text);
   text-align: center;
 }
 
@@ -698,7 +706,7 @@ h2 {
   padding: 2.5rem;
   border: 1px solid var(--line);
   border-radius: 0.6rem;
-  background: rgba(246, 239, 232, 0.03);
+  background: #fff;
 }
 
 .admin-login-page label {
@@ -714,7 +722,7 @@ h2 {
   padding: 0.9rem 1rem;
   border: 1px solid var(--line);
   border-radius: 0.4rem;
-  background: rgba(246, 239, 232, 0.04);
+  background: #fff;
   color: var(--text);
   font: inherit;
   letter-spacing: normal;
@@ -754,6 +762,18 @@ h2 {
   font-size: 0.85rem;
 }
 
+.admin-layout {
+  --bg: #f4f4f2;
+  --text: #2a2a2a;
+  --muted: rgba(42, 42, 42, 0.6);
+  --line: rgba(42, 42, 42, 0.15);
+  position: relative;
+  z-index: 3;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+}
+
 .admin-nav {
   display: flex;
   align-items: center;
@@ -766,7 +786,7 @@ h2 {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   font-size: 0.9rem;
-  color: #cfc9c2;
+  color: var(--text);
 }
 
 .admin-nav-links {
@@ -776,7 +796,7 @@ h2 {
 }
 
 .admin-nav-links a {
-  color: var(--muted);
+  color: var(--text);
   text-decoration: none;
   font-size: 0.85rem;
   letter-spacing: 0.08em;
@@ -790,21 +810,20 @@ h2 {
 
 .admin-nav button {
   padding: 0.6rem 1.5rem;
-  border: 1px solid var(--line);
+  border: none;
   border-radius: 999px;
-  background: transparent;
-  color: var(--text);
+  background: #f4020b;
+  color: #fff;
   font: inherit;
   font-size: 0.8rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: border-color 0.2s ease-out, color 0.2s ease-out;
+  transition: background-color 0.2s ease-out;
 }
 
 .admin-nav button:hover {
-  border-color: var(--glow);
-  color: var(--glow);
+  background: #c9020a;
 }
 
 .admin-dashboard-page,
@@ -820,7 +839,7 @@ h2 {
   font-weight: 300;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #cfc9c2;
+  color: var(--text);
   margin-bottom: 1rem;
 }
 
@@ -837,6 +856,8 @@ h2 {
 
 .admin-page-header .button {
   margin-top: 0;
+  background: var(--text);
+  color: var(--bg);
 }
 
 .admin-table {
@@ -865,31 +886,24 @@ h2 {
   gap: 1rem;
 }
 
-.admin-table-actions a {
-  color: var(--glow);
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-
-.admin-table-actions a:hover {
-  text-decoration: underline;
-}
-
+.admin-table-actions a,
 .admin-table-actions button {
+  display: inline-block;
   padding: 0.4rem 1rem;
-  border: 1px solid var(--line);
+  border: none;
   border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
+  background: #e5e4e1;
+  color: var(--text);
   font: inherit;
   font-size: 0.8rem;
+  text-decoration: none;
   cursor: pointer;
-  transition: border-color 0.2s ease-out, color 0.2s ease-out;
+  transition: background-color 0.2s ease-out;
 }
 
+.admin-table-actions a:hover,
 .admin-table-actions button:hover {
-  border-color: #f4020b;
-  color: #f4020b;
+  background: #d6d5d1;
 }
 
 .admin-product-form-page {
@@ -901,7 +915,7 @@ h2 {
   font-weight: 300;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #cfc9c2;
+  color: var(--text);
   margin-bottom: 2rem;
 }
 
@@ -930,7 +944,7 @@ h2 {
   padding: 0.9rem 1rem;
   border: 1px solid var(--line);
   border-radius: 0.4rem;
-  background: rgba(246, 239, 232, 0.04);
+  background: #fff;
   color: var(--text);
   font: inherit;
   letter-spacing: normal;

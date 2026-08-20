@@ -30,7 +30,7 @@ function AdminLayout() {
   return (
     <div className="admin-layout">
       <nav className="admin-nav">
-        <span>Adminpanel</span>
+        <span>Adminpanel - Vikingsås</span>
         <div className="admin-nav-links">
           <Link to="/admin/bestallningar">Beställningar</Link>
           <Link to="/admin/produkter">Produkter</Link>
