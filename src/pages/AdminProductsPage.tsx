@@ -48,7 +48,17 @@ function AdminProductsPage() {
               <td>{product.title}</td>
               <td>{product.heat_level}</td>
               <td>{formatCurrency(product.price)}</td>
-              <td>{product.is_active ? 'Aktiv' : 'Inaktiv'}</td>
+              <td>
+                <span
+                  className={
+                    product.is_active
+                      ? 'status-pill status-active'
+                      : 'status-pill status-inactive'
+                  }
+                >
+                  {product.is_active ? 'Aktiv' : 'Inaktiv'}
+                </span>
+              </td>
               <td className="admin-table-actions">
                 <Link to={`/admin/produkter/${product.id}`}>Redigera</Link>
                 <button type="button" onClick={() => deleteProduct(product.id)}>

@@ -31,11 +31,8 @@ function App() {
             <Route path="produkter" element={<AdminProductsPage />} />
             <Route path="produkter/ny" element={<AdminProductFormPage />} />
             <Route path="produkter/:id" element={<AdminProductFormPage />} />
-            <Route path="bestallningar" element={<AdminOrdersPage />} />
-            <Route
-              path="bestallningar/:id"
-              element={<AdminOrderDetailPage />}
-            />
+            <Route path="ordrar" element={<AdminOrdersPage />} />
+            <Route path="ordrar/:id" element={<AdminOrderDetailPage />} />
           </Route>
         </Routes>
       </Router>

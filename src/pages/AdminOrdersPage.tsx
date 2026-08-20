@@ -3,6 +3,13 @@ import { Link } from 'react-router'
 import type { Order } from '../types/types'
 import { formatCurrency, formatOrderDate } from '../utils/format'
 
+const statusClass: Record<Order['status'], string> = {
+  Beställd: 'status-pending',
+  Behandlas: 'status-processing',
+  Levererad: 'status-delivered',
+  Återbetald: 'status-refunded',
+}
+
 function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
 
@@ -20,7 +27,7 @@ function AdminOrdersPage() {
   return (
     <main className="admin-orders-page">
       <div className="admin-page-header">
-        <h1>Beställningar</h1>
+        <h1>Ordrar</h1>
       </div>
       <table className="admin-table">
         <thead>
@@ -40,9 +47,13 @@ function AdminOrdersPage() {
               <td>{order.customer_name}</td>
               <td>{order.customer_email}</td>
               <td>{formatCurrency(order.total_amount)}</td>
-              <td>{order.status}</td>
+              <td>
+                <span className={`status-pill ${statusClass[order.status]}`}>
+                  {order.status}
+                </span>
+              </td>
               <td className="admin-table-actions">
-                <Link to={`/admin/bestallningar/${order.id}`} type="button">
+                <Link to={`/admin/ordrar/${order.id}`} type="button">
                   Detaljer
                 </Link>
               </td>

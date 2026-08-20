@@ -41,13 +41,7 @@ function AdminOrderDetailPage() {
   return (
     <main className="admin-order-detail-page">
       <div className="admin-page-header">
-        <h1>Beställning #{order.id}</h1>
-      </div>
-      <div className="admin-order-info">
-        <p>Inkom: {formatOrderDate(order.created_at)}</p>
-        <p>Kund: {order.customer_name}</p>
-        <p>Email: {order.customer_email}</p>
-        <p>Summa: {formatCurrency(order.total_amount)}</p>
+        <h1>Order #{order.id}</h1>
         <select
           value={order.status}
           onChange={(e) => changeOrderStatus(e.target.value as Order['status'])}
@@ -58,26 +52,34 @@ function AdminOrderDetailPage() {
           <option value="Återbetald">Återbetald</option>
         </select>
       </div>
-      <table className="admin-table">
-        <thead>
-          <tr>
-            <th>Produkt</th>
-            <th>Antal</th>
-            <th>Pris (st)</th>
-            <th>Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>
-          {order.items.map((item) => (
-            <tr key={item.product_id}>
-              <td>{item.product_title}</td>
-              <td>{item.quantity}</td>
-              <td>{formatCurrency(item.unit_price)}</td>
-              <td>{formatCurrency(item.unit_price * item.quantity)}</td>
+      <div className="admin-order-card">
+        <div className="admin-order-info">
+          <p>Inkom: {formatOrderDate(order.created_at)}</p>
+          <p>Kund: {order.customer_name}</p>
+          <p>Email: {order.customer_email}</p>
+          <p>Summa: {formatCurrency(order.total_amount)}</p>
+        </div>
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Produkt</th>
+              <th>Antal</th>
+              <th>Pris (st)</th>
+              <th>Subtotal</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {order.items.map((item) => (
+              <tr key={item.product_id}>
+                <td>{item.product_title}</td>
+                <td>{item.quantity}</td>
+                <td>{formatCurrency(item.unit_price)}</td>
+                <td>{formatCurrency(item.unit_price * item.quantity)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </main>
   )
 }
