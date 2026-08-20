@@ -253,12 +253,13 @@ adminRouter.delete('/products/:id', async (req, res) => {
 adminRouter.get('/orders', async (_req, res) => {
   try {
     const orders = await pool.query(
-      `SELECT o.id, o.customer_name, o.customer_email, o.total_amount, o.created_at,
+      `SELECT o.id, o.customer_name, o.customer_email, o.total_amount, o.created_at, o.status,
               json_agg(json_build_object(
                 'product_id', oi.product_id,
                 'product_title', oi.product_title,
                 'unit_price', oi.unit_price,
-                'quantity', oi.quantity
+                'quantity', oi.quantity,
+                'status', o.status
               )) AS items
        FROM orders o
        JOIN order_items oi ON o.id = oi.order_id
@@ -277,12 +278,13 @@ adminRouter.get('/orders', async (_req, res) => {
 adminRouter.get('/orders/:id', async (req, res) => {
   try {
     const order = await pool.query(
-      `SELECT o.id, o.customer_name, o.customer_email, o.total_amount, o.created_at,
+      `SELECT o.id, o.customer_name, o.customer_email, o.total_amount, o.created_at, o.status,
               json_agg(json_build_object(
                 'product_id', oi.product_id,
                 'product_title', oi.product_title,
                 'unit_price', oi.unit_price,
-                'quantity', oi.quantity
+                'quantity', oi.quantity,
+                'status', o.status
               )) AS items
        FROM orders o
        JOIN order_items oi ON o.id = oi.order_id

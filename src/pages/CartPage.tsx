@@ -2,6 +2,7 @@ import { useEffect, useState, useContext } from 'react'
 import type { CartItem } from '../types/types'
 import { Link } from 'react-router'
 import { CartContext } from '../context/CartContext'
+import { formatCurrency } from '../utils/format'
 
 function CartPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([])
@@ -55,7 +56,7 @@ function CartPage() {
                 />
                 <h2 className="cart-item-title">{item.title}</h2>
                 <p className="cart-item-price">
-                  {Number(item.price)} kr per st
+                  {formatCurrency(item.price)} per st
                 </p>
                 <p className="cart-item-quantity">
                   <button
@@ -74,14 +75,14 @@ function CartPage() {
                 </p>
 
                 <p className="cart-item-sum">
-                  {Number(item.price) * item.quantity} kr
+                  {formatCurrency(Number(item.price) * item.quantity)}
                 </p>
               </li>
             ))}
           </ul>
           <p className="cart-total">
             <span>Totalt</span>
-            <strong>{total} kr</strong>
+            <strong>{formatCurrency(total)}</strong>
           </p>
           <Link to="/kassa" className="button">
             Gå till kassan

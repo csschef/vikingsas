@@ -10,6 +10,7 @@ import AdminDashboardPage from './pages/AdminDashboardPage'
 import { CartProvider } from './context/CartContext'
 import AdminProductsPage from './pages/AdminProductsPage'
 import AdminProductFormPage from './pages/AdminProductFormPage'
+import AdminOrdersPage from './pages/AdminOrdersPage'
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
             <Route path="produkter" element={<AdminProductsPage />} />
             <Route path="produkter/ny" element={<AdminProductFormPage />} />
             <Route path="produkter/:id" element={<AdminProductFormPage />} />
+            <Route path="bestallningar" element={<AdminOrdersPage />} />
           </Route>
         </Routes>
       </Router>

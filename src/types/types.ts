@@ -26,3 +26,20 @@ export type CartItem = {
   price: string
   image_url: string
 }
+
+export type Order = {
+  id: number
+  customer_name: string
+  customer_email: string
+  total_amount: string
+  created_at: string
+  items: OrderItem[]
+  status: 'Beställd' | 'Behandlas' | 'Levererad' | 'Återbetald'
+}
+
+export type OrderItem = {
+  product_id: number
+  product_title: string
+  quantity: number
+  unit_price: number
+}

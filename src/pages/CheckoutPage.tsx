@@ -1,6 +1,7 @@
 import { useEffect, useState, type SubmitEvent } from 'react'
 import { useNavigate } from 'react-router'
 import type { CartItem } from '../types/types'
+import { formatCurrency } from '../utils/format'
 
 function CheckoutPage() {
   const [name, setName] = useState('')
@@ -20,10 +21,7 @@ function CheckoutPage() {
     0,
   )
 
-  const moms = ((total * 0.12) / 1.12).toLocaleString('sv-SE', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
+  const moms = formatCurrency((total * 0.12) / 1.12)
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -75,15 +73,15 @@ function CheckoutPage() {
                 <span>
                   {item.title} x {item.quantity}
                 </span>
-                <span>{Number(item.price) * item.quantity} kr</span>
+                <span>{formatCurrency(Number(item.price) * item.quantity)}</span>
               </li>
             ))}
           </ul>
           <p className="summary-total">
             <span>Att betala </span>
-            <strong>{total} kr</strong>
+            <strong>{formatCurrency(total)}</strong>
           </p>
-          <p className="summary-vat">varav moms {moms} kr</p>
+          <p className="summary-vat">varav moms {moms}</p>
         </section>
       </div>
     </main>

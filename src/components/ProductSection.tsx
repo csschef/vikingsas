@@ -1,6 +1,7 @@
 import type { Product } from '../types/types'
 import { useRef, useState, useEffect, useContext } from 'react'
 import { CartContext } from '../context/CartContext'
+import { formatCurrency } from '../utils/format'
 
 type ProductSectionProps = {
   product: Product
@@ -67,7 +68,7 @@ function ProductSection({ product, index }: ProductSectionProps) {
         <h2>{product.title}</h2>
         <p className="description">{product.description}</p>
         <p className="price">
-          {Number(product.price)} kr
+          {formatCurrency(product.price)}
           <span className="volume">{product.volume_ml} ml</span>
         </p>
 

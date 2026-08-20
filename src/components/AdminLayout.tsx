@@ -32,6 +32,7 @@ function AdminLayout() {
       <nav className="admin-nav">
         <span>Adminpanel</span>
         <div className="admin-nav-links">
+          <Link to="/admin/bestallningar">Beställningar</Link>
           <Link to="/admin/produkter">Produkter</Link>
           <button type="button" onClick={handleLogout}>
             Logga ut

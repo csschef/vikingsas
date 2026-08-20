@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import type { Product } from '../types/types'
+import { formatCurrency } from '../utils/format'
 
 function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -46,12 +47,12 @@ function AdminProductsPage() {
             <tr key={product.id}>
               <td>{product.title}</td>
               <td>{product.heat_level}</td>
-              <td>{Number(product.price)} kr</td>
+              <td>{formatCurrency(product.price)}</td>
               <td>{product.is_active ? 'Aktiv' : 'Inaktiv'}</td>
               <td className="admin-table-actions">
                 <Link to={`/admin/produkter/${product.id}`}>Redigera</Link>
                 <button type="button" onClick={() => deleteProduct(product.id)}>
-                  Ta bort
+                  Inaktivera
                 </button>
               </td>
             </tr>
