@@ -17,10 +17,21 @@ function AdminProductsPage() {
     loadProducts()
   }, [])
 
-  function deleteProduct(id: number) {
-    fetch(`/api/admin/products/${id}`, { method: 'DELETE' })
-      .then(() => loadProducts())
-      .catch((error) => console.error('Kunde inte ta bort produkten', error))
+  function toggleProductStatus(product: Product) {
+    fetch(`/api/admin/products/${product.id}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ is_active: !product.is_active }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setProducts((prev) =>
+          prev.map((p) => (p.id === data.product.id ? data.product : p)),
+        )
+      })
+      .catch((error) => console.error('Kunde inte uppdatera produkten', error))
   }
 
   return (
@@ -61,8 +72,11 @@ function AdminProductsPage() {
               </td>
               <td className="admin-table-actions">
                 <Link to={`/admin/produkter/${product.id}`}>Redigera</Link>
-                <button type="button" onClick={() => deleteProduct(product.id)}>
-                  Inaktivera
+                <button
+                  type="button"
+                  onClick={() => toggleProductStatus(product)}
+                >
+                  {product.is_active ? 'Inaktivera' : 'Aktivera'}
                 </button>
               </td>
             </tr>

@@ -231,18 +231,17 @@ adminRouter.put('/products/:id', async (req, res) => {
 // En produkt raderas inte från databasen, utan markeras som inaktiv.
 // På så sätt kan vi behålla historik och undvika problem med ordrar som refererar
 // till produkter som inte längre finns.
-adminRouter.delete('/products/:id', async (req, res) => {
+adminRouter.put('/products/:id/status', async (req, res) => {
   try {
-    const deletedProduct = await pool.query(
-      'UPDATE products SET is_active = false WHERE id = $1 RETURNING *',
-      [req.params.id]
+    const updatedProduct = await pool.query(
+      'UPDATE products SET is_active = $1 WHERE id = $2 RETURNING *',
+      [req.body.is_active, req.params.id]
     )
-    if (deletedProduct.rows.length === 0) {
+    if (updatedProduct.rows.length === 0) {
       return res.status(404).json({ status: 'fel', error: 'Produkten finns inte' })
     }
-    res.json({ product: deletedProduct.rows[0] })
-  }
-  catch (error) {
+    res.json({ product: updatedProduct.rows[0] })
+  } catch (error) {
     res.status(500).json({
       status: 'fel',
       error: error instanceof Error ? error.message : String(error)

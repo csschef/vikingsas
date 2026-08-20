@@ -80,10 +80,6 @@ function AdminProductFormPage() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  function handleActiveChange(event: ChangeEvent<HTMLInputElement>) {
-    setFormData((prev) => ({ ...prev, is_active: event.target.checked }))
-  }
-
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     const url = isEditMode ? `/api/admin/products/${id}` : '/api/admin/products'
@@ -264,16 +260,6 @@ function AdminProductFormPage() {
             required
           />
         </label>
-        <label className="admin-form-checkbox">
-          <input
-            type="checkbox"
-            name="is_active"
-            checked={formData.is_active}
-            onChange={handleActiveChange}
-          />
-          Aktiv
-        </label>
-
         <button type="submit">
           {isEditMode ? 'Spara ändringar' : 'Skapa produkt'}
         </button>
