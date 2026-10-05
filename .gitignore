@@ -20,6 +20,9 @@ dist-ssr
 # Vercel
 .vercel
 
+# Egen planering
+PLAN.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
