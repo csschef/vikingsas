@@ -3,11 +3,12 @@ import type { CartItem } from '../types/types'
 import { Link } from 'react-router'
 import { TrashIcon } from '@phosphor-icons/react'
 import { CartContext } from '../context/CartContext'
-import { formatCurrency } from '../utils/format'
+import { CurrencyContext } from '../context/CurrencyContext'
 
 function CartPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const { refreshCount } = useContext(CartContext)
+  const { formatPrice } = useContext(CurrencyContext)
 
   function loadCart() {
     fetch('/api/cart')
@@ -57,7 +58,7 @@ function CartPage() {
                 />
                 <h2 className="cart-item-title">{item.title}</h2>
                 <p className="cart-item-price">
-                  {formatCurrency(item.price)} per st
+                  {formatPrice(item.price)} per st
                 </p>
                 <p className="cart-item-quantity">
                   <button
@@ -76,7 +77,7 @@ function CartPage() {
                 </p>
 
                 <p className="cart-item-sum">
-                  {formatCurrency(Number(item.price) * item.quantity)}
+                  {formatPrice(Number(item.price) * item.quantity)}
                 </p>
                 <button
                   type="button"
@@ -91,7 +92,7 @@ function CartPage() {
           </ul>
           <p className="cart-total">
             <span>Totalt</span>
-            <strong>{formatCurrency(total)}</strong>
+            <strong>{formatPrice(total)}</strong>
           </p>
           <Link to="/kassa" className="button">
             Gå till kassan

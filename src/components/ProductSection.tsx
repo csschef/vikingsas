@@ -1,7 +1,7 @@
 import type { Product } from '../types/types'
 import { useRef, useState, useEffect, useContext } from 'react'
 import { CartContext } from '../context/CartContext'
-import { formatCurrency } from '../utils/format'
+import { CurrencyContext } from '../context/CurrencyContext'
 
 type ProductSectionProps = {
   product: Product
@@ -13,6 +13,7 @@ function ProductSection({ product, index }: ProductSectionProps) {
   const [visible, setVisible] = useState(false)
   const [addedToCart, setAddedToCart] = useState(false)
   const { refreshCount } = useContext(CartContext)
+  const { formatPrice } = useContext(CurrencyContext)
 
   useEffect(() => {
     const element = sectionRef.current
@@ -67,7 +68,7 @@ function ProductSection({ product, index }: ProductSectionProps) {
         <h2>{product.title}</h2>
         <p className="description">{product.description}</p>
         <p className="price">
-          {formatCurrency(product.price)}
+          {formatPrice(product.price)}
           <span className="volume">{product.volume_ml} ml</span>
         </p>
 

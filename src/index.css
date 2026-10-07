@@ -84,6 +84,35 @@ h2 {
   font-weight: 700;
 }
 
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.currency-select {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: #cfc9c2;
+  font: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.2s ease-out;
+}
+
+.currency-select:hover {
+  opacity: 1;
+}
+
+.currency-select option {
+  background: #000;
+  color: var(--text);
+}
+
 .nav-link {
   position: relative;
   display: flex;
@@ -372,7 +401,8 @@ h2 {
   text-transform: uppercase;
 }
 
-.summary-vat {
+.summary-vat,
+.summary-note {
   margin: 0.25rem 0 0;
   color: var(--muted);
   font-size: 0.8rem;

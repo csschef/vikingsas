@@ -1,10 +1,9 @@
-const currencyFormatter = new Intl.NumberFormat('sv-SE', {
-  style: 'currency',
-  currency: 'SEK',
-})
-
-export function formatCurrency(amount: number | string) {
-  return currencyFormatter.format(Number(amount))
+export function formatCurrency(amount: number | string, currency = 'SEK') {
+  const formatter = new Intl.NumberFormat('sv-SE', {
+    style: 'currency',
+    currency,
+  })
+  return formatter.format(Number(amount))
 }
 
 const orderDateFormatter = new Intl.DateTimeFormat('sv-SE', {

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import type { CartItem } from '../types/types'
 import { formatCurrency } from '../utils/format'
 import { CartContext } from '../context/CartContext'
+import { CurrencyContext } from '../context/CurrencyContext'
 
 function CheckoutPage() {
   const [name, setName] = useState('')
@@ -10,6 +11,7 @@ function CheckoutPage() {
   const navigate = useNavigate()
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const { refreshCount } = useContext(CartContext)
+  const { currency } = useContext(CurrencyContext)
 
   useEffect(() => {
     fetch('/api/cart')
@@ -84,6 +86,9 @@ function CheckoutPage() {
             <strong>{formatCurrency(total)}</strong>
           </p>
           <p className="summary-vat">varav moms {moms}</p>
+          {currency !== 'SEK' && (
+            <p className="summary-note">Du betalar i svenska kronor.</p>
+          )}
         </section>
       </div>
     </main>
