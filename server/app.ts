@@ -5,6 +5,7 @@ import session from 'express-session'
 import connectPgSimple from 'connect-pg-simple'
 import bcrypt from 'bcryptjs'
 import healthRouter from './routes/health.js'
+import productsRouter from './routes/products.js'
 
 declare module 'express-session' {
   interface SessionData {
@@ -323,18 +324,7 @@ adminRouter.put('/orders/:id/status', async (req, res) => {
 
 app.use('/api/admin', adminRouter)
 app.use('/api/health', healthRouter)
-
-app.get('/api/products', async (_req, res) => {
-  try {
-    const products = await pool.query('SELECT * FROM products WHERE is_active = true ORDER BY heat_level')
-    res.json({ products: products.rows })
-  } catch (error) {
-    res.status(500).json({
-      status: 'fel',
-      error: error instanceof Error ? error.message : String(error)
-    })
-  }
-})
+app.use('/api/products', productsRouter)
 
 app.post('/api/cart', async (req, res) => {
   try {
