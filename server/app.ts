@@ -7,6 +7,7 @@ import healthRouter from './routes/health.js'
 import productsRouter from './routes/products.js'
 import cartRouter from './routes/cart.js'
 import ordersRouter from './routes/orders.js'
+import currencyRouter from './routes/currency.js'
 import adminAuthRouter from './routes/adminAuth.js'
 import adminProductsRouter from './routes/adminProducts.js'
 import adminOrdersRouter from './routes/adminOrders.js'
@@ -47,6 +48,7 @@ app.use('/api/health', healthRouter)
 app.use('/api/products', productsRouter)
 app.use('/api/cart', cartRouter)
 app.use('/api/orders', ordersRouter)
+app.use('/api/currency', currencyRouter)
 
 app.use('/api/admin', adminAuthRouter)
 app.use('/api/admin/products', requireAuth, adminProductsRouter)
