@@ -4,6 +4,8 @@ import cookieParser from 'cookie-parser'
 import session from 'express-session'
 import connectPgSimple from 'connect-pg-simple'
 import bcrypt from 'bcryptjs'
+import healthRouter from './routes/health.js'
+
 declare module 'express-session' {
   interface SessionData {
     userId: number
@@ -320,18 +322,7 @@ adminRouter.put('/orders/:id/status', async (req, res) => {
 })
 
 app.use('/api/admin', adminRouter)
-
-app.get('/api/health', async (_req, res) => {
-  try {
-    const result = await pool.query('SELECT count(*) FROM products')
-    res.json({ status: 'ok', products: Number(result.rows[0].count) })
-  } catch (error) {
-    res.status(500).json({
-      status: 'fel',
-      error: error instanceof Error ? error.message : String(error)
-    })
-  }
-})
+app.use('/api/health', healthRouter)
 
 app.get('/api/products', async (_req, res) => {
   try {
