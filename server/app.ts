@@ -6,6 +6,8 @@ import connectPgSimple from 'connect-pg-simple'
 import bcrypt from 'bcryptjs'
 import healthRouter from './routes/health.js'
 import productsRouter from './routes/products.js'
+import { sessionCookie } from './middleware/sessionCookie.js'
+import { getCartId } from './lib/cart.js'
 
 declare module 'express-session' {
   interface SessionData {
@@ -36,24 +38,7 @@ app.use(session({
 }))
 
 
-app.use((req, res, next) => {
-  if (!req.cookies.session_id) {
-    const sessionId = crypto.randomUUID()
-    res.cookie('session_id', sessionId, { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 })
-    req.cookies.session_id = sessionId
-  }
-  next()
-})
-
-async function getCartId(sessionId: string) {
-  const result = await pool.query('SELECT id FROM carts WHERE session_id = $1', [sessionId])
-  if (result.rows.length > 0) {
-    return result.rows[0].id
-  } else {
-    const insertResult = await pool.query('INSERT INTO carts (session_id) VALUES ($1) RETURNING id', [sessionId])
-    return insertResult.rows[0].id
-  }
-}
+app.use(sessionCookie)
 
 const adminRouter = express.Router()
 
