@@ -1,3 +1,5 @@
+import { fetchJson } from '../lib/fetchJson.js'
+
 const CURRENCIES = ['EUR', 'NOK', 'DKK']
 
 type Rates = {
@@ -23,12 +25,7 @@ export async function getRates(): Promise<Rates> {
   url.searchParams.set('base', 'SEK')
   url.searchParams.set('symbols', CURRENCIES.join(','))
 
-  const response = await fetch(url, { signal: AbortSignal.timeout(5000) })
-  if (!response.ok) {
-    throw new Error(`Frankfurter svarade med status ${response.status}`)
-  }
-
-  const data = (await response.json()) as FrankfurterResponse
+  const data = (await fetchJson(url.toString())) as FrankfurterResponse
 
   // Frankfurter skickar inte med basvalutan, så SEK läggs till här
   return {
