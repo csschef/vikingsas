@@ -28,9 +28,9 @@ export async function fetchJson(
     if (response.ok) {
       return response.json();
     }
-    // Not worth retrying, or out of attempts: throw, like today
+    // Not worth retrying, or out of attempts: throw
     if (!RETRYABLE.has(response.status) || attempt === MAX_ATTEMPTS) {
-    throw new Error(`${url} responded with status ${response.status} ${response.statusText}`);
+        throw new Error(`${url} responded with status ${response.status} ${response.statusText}`);
     }
     // Otherwise: log, wait one second, and let the loop make the next attempt
     console.warn(`Status ${response.status}, attempt ${attempt} of ${MAX_ATTEMPTS}. Trying again in 1 second.`);
