@@ -2,6 +2,9 @@ import { z } from 'zod'
 import { fetchJson } from '../lib/fetchJson.js'
 
 const CURRENCIES = ['EUR', 'NOK', 'DKK']
+const CACHE_MS = Number(process.env.CURRENCY_CACHE_SECONDS ?? 300) * 1000
+
+let cache: { value: Rates; expiresAt: number } | null = null
 
 type Rates = {
   base: string
@@ -16,6 +19,10 @@ const FrankfurterResponseSchema = z.object({
 })
 
 export async function getRates(): Promise<Rates> {
+  if (cache && cache.expiresAt > Date.now()) {
+    return cache.value
+  }
+
   const baseUrl = process.env.CURRENCY_API_URL
   if (!baseUrl) {
     throw new Error('CURRENCY_API_URL saknas i miljövariablerna')
@@ -32,9 +39,13 @@ export async function getRates(): Promise<Rates> {
   }
 
   // Frankfurter skickar inte med basvalutan, så SEK läggs till här
-  return {
+  const value = {
     base: parsed.data.base,
     date: parsed.data.date,
     rates: { [parsed.data.base]: 1, ...parsed.data.rates },
   }
+
+  cache = { value, expiresAt: Date.now() + CACHE_MS }
+
+  return value
 }
