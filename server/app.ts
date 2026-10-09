@@ -1,4 +1,4 @@
-import express from 'express'
+import express, { type NextFunction, type Request, type Response } from 'express'
 import { pool } from './db.js'
 import cookieParser from 'cookie-parser'
 import session from 'express-session'
@@ -53,5 +53,12 @@ app.use('/api/currency', currencyRouter)
 app.use('/api/admin', adminAuthRouter)
 app.use('/api/admin/products', requireAuth, adminProductsRouter)
 app.use('/api/admin/orders', requireAuth, adminOrdersRouter)
+
+// Generell felhantering. Om en route kastar ett fel, loggas det och klienten får 500.
+app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
+  const message = err instanceof Error ? err.message : String(err)
+  console.error(`${req.method} ${req.originalUrl} misslyckades: ${message}`)
+  res.status(500).json({ error: 'Något gick fel på servern' })
+})
 
 export default app
