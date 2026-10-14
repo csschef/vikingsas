@@ -57,3 +57,12 @@ CREATE TABLE users (
 );
 
 ALTER TABLE orders ADD COLUMN status TEXT NOT NULL DEFAULT 'Beställd' CHECK (status IN ('Beställd', 'Behandlas', 'Levererad', 'Återbetald'));
+
+ALTER TABLE products ADD COLUMN sku TEXT UNIQUE;
+ALTER TABLE products ADD COLUMN ean TEXT;
+ALTER TABLE products ADD COLUMN category TEXT;
+ALTER TABLE products ADD COLUMN stock INTEGER CHECK (stock >= 0);
+ALTER TABLE products ADD COLUMN variants TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE products ADD COLUMN is_featured BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE products ALTER COLUMN volume_ml DROP NOT NULL;
+ALTER TABLE products ALTER COLUMN heat_level DROP NOT NULL;
