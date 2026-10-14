@@ -5,7 +5,7 @@ const router = Router()
 
 router.get('/', async (_req, res) => {
   try {
-    const products = await pool.query('SELECT * FROM products ORDER BY heat_level')
+    const products = await pool.query('SELECT * FROM products ORDER BY heat_level, sku')
     res.json({ products: products.rows })
   } catch (error) {
     res.status(500).json({
