@@ -6,7 +6,7 @@ function HomePage() {
   const [products, setProducts] = useState<Product[]>([])
 
   useEffect(() => {
-    fetch('/api/products')
+    fetch('/api/products/featured')
       .then((res) => res.json())
       .then((data) => setProducts(data.products))
       .catch((error) => console.error('Kunde inte hämta produkter', error))

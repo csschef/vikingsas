@@ -925,6 +925,42 @@ h2 {
   color: var(--bg);
 }
 
+.admin-page-header .button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.admin-page-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.admin-products-page .form-error {
+  margin-bottom: 2rem;
+}
+
+.import-report {
+  margin: 0 0 2rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+}
+
+.import-report h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.import-report p {
+  margin: 0;
+}
+
+.import-report ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  color: var(--muted);
+}
+
 .status-dropdown {
   position: relative;
   display: inline-block;
