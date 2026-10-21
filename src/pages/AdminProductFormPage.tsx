@@ -2,6 +2,7 @@ import { useEffect, useState, type ChangeEvent, type SubmitEvent } from 'react'
 import { useNavigate, useParams } from 'react-router'
 
 type ProductFormData = {
+  sku: string
   title: string
   description: string
   volume_ml: string
@@ -21,6 +22,7 @@ type ProductFormData = {
 }
 
 const emptyProduct: ProductFormData = {
+  sku: '',
   title: '',
   description: '',
   volume_ml: '',
@@ -39,11 +41,22 @@ const emptyProduct: ProductFormData = {
   is_active: true,
 }
 
+// Tomma fält skickas som null, en tom sträng går inte att spara i en sifferkolumn
+function toRequestBody(data: ProductFormData) {
+  return Object.fromEntries(
+    Object.entries(data).map(([key, value]) => [
+      key,
+      value === '' ? null : value,
+    ]),
+  )
+}
+
 function AdminProductFormPage() {
   const { id } = useParams()
   const isEditMode = Boolean(id)
   const navigate = useNavigate()
   const [formData, setFormData] = useState<ProductFormData>(emptyProduct)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (!id) return
@@ -52,6 +65,7 @@ function AdminProductFormPage() {
       .then((data) => {
         const product = data.product
         setFormData({
+          sku: product.sku ?? '',
           title: product.title,
           description: product.description ?? '',
           volume_ml: String(product.volume_ml ?? ''),
@@ -82,27 +96,46 @@ function AdminProductFormPage() {
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
+    setError('')
     const url = isEditMode ? `/api/admin/products/${id}` : '/api/admin/products'
     const method = isEditMode ? 'PUT' : 'POST'
 
     fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
+      body: JSON.stringify(toRequestBody(formData)),
     })
-      .then((res) => {
+      .then(async (res) => {
+        const data = await res.json()
         if (!res.ok) {
-          throw new Error('Kunde inte spara produkten')
+          throw new Error(data.error ?? 'Kunde inte spara produkten')
         }
-        navigate('/admin/produkter')
+        navigate('/admin/produkter', {
+          state: { searchIndexed: data.searchIndexed },
+        })
       })
-      .catch((error) => console.error(error))
+      .catch((error) =>
+        setError(
+          error instanceof Error ? error.message : 'Kunde inte spara produkten',
+        ),
+      )
   }
 
   return (
     <main className="admin-product-form-page">
       <h1>{isEditMode ? 'Redigera produkt' : 'Ny produkt'}</h1>
       <form onSubmit={handleSubmit} className="admin-product-form">
+        <label>
+          Artikelnummer
+          <input
+            type="text"
+            name="sku"
+            value={formData.sku}
+            onChange={handleChange}
+            readOnly={isEditMode}
+            required
+          />
+        </label>
         <label>
           Titel
           <input
@@ -119,7 +152,6 @@ function AdminProductFormPage() {
             name="description"
             value={formData.description}
             onChange={handleChange}
-            required
           />
         </label>
         <label>
@@ -129,7 +161,6 @@ function AdminProductFormPage() {
             name="volume_ml"
             value={formData.volume_ml}
             onChange={handleChange}
-            required
           />
         </label>
         <label>
@@ -152,7 +183,6 @@ function AdminProductFormPage() {
             name="heat_level"
             value={formData.heat_level}
             onChange={handleChange}
-            required
           />
         </label>
         <label>
@@ -162,7 +192,6 @@ function AdminProductFormPage() {
             name="image_url"
             value={formData.image_url}
             onChange={handleChange}
-            required
           />
         </label>
         <label>
@@ -171,7 +200,6 @@ function AdminProductFormPage() {
             name="ingredients"
             value={formData.ingredients}
             onChange={handleChange}
-            required
           />
         </label>
         <label>
@@ -181,7 +209,6 @@ function AdminProductFormPage() {
             name="energy_kj"
             value={formData.energy_kj}
             onChange={handleChange}
-            required
           />
         </label>
         <label>
@@ -191,7 +218,6 @@ function AdminProductFormPage() {
             name="energy_kcal"
             value={formData.energy_kcal}
             onChange={handleChange}
-            required
           />
         </label>
         <label>
@@ -202,7 +228,6 @@ function AdminProductFormPage() {
             name="fat_g"
             value={formData.fat_g}
             onChange={handleChange}
-            required
           />
         </label>
         <label>
@@ -213,7 +238,6 @@ function AdminProductFormPage() {
             name="saturated_fat_g"
             value={formData.saturated_fat_g}
             onChange={handleChange}
-            required
           />
         </label>
         <label>
@@ -224,7 +248,6 @@ function AdminProductFormPage() {
             name="carbohydrate_g"
             value={formData.carbohydrate_g}
             onChange={handleChange}
-            required
           />
         </label>
         <label>
@@ -235,7 +258,6 @@ function AdminProductFormPage() {
             name="sugars_g"
             value={formData.sugars_g}
             onChange={handleChange}
-            required
           />
         </label>
         <label>
@@ -246,7 +268,6 @@ function AdminProductFormPage() {
             name="protein_g"
             value={formData.protein_g}
             onChange={handleChange}
-            required
           />
         </label>
         <label>
@@ -257,9 +278,9 @@ function AdminProductFormPage() {
             name="salt_g"
             value={formData.salt_g}
             onChange={handleChange}
-            required
           />
         </label>
+        {error && <p className="form-error">{error}</p>}
         <button type="submit">
           {isEditMode ? 'Spara ändringar' : 'Skapa produkt'}
         </button>

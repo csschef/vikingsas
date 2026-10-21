@@ -1247,6 +1247,15 @@ h2 {
   border-color: var(--glow);
 }
 
+.admin-product-form input:read-only {
+  background: #f3f2ef;
+  color: var(--muted);
+}
+
+.admin-product-form .form-error {
+  grid-column: 1 / -1;
+}
+
 .admin-product-form button {
   grid-column: 1 / -1;
   justify-self: start;

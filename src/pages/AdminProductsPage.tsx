@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { CaretRightIcon } from '@phosphor-icons/react'
 import type { Product } from '../types/types'
 import { formatCurrency } from '../utils/format'
@@ -17,6 +17,11 @@ function AdminProductsPage() {
   const [importing, setImporting] = useState(false)
   const [importReport, setImportReport] = useState<ImportReport | null>(null)
   const [importError, setImportError] = useState('')
+  const location = useLocation()
+  // Formuläret skickar med searchIndexed hit efter att en produkt sparats
+  const [searchWarning, setSearchWarning] = useState(
+    location.state?.searchIndexed === false,
+  )
 
   function loadProducts() {
     fetch('/api/admin/products')
@@ -64,6 +69,7 @@ function AdminProductsPage() {
         setProducts((prev) =>
           prev.map((p) => (p.id === data.product.id ? data.product : p)),
         )
+        setSearchWarning(data.searchIndexed === false)
       })
       .catch((error) => console.error('Kunde inte uppdatera produkten', error))
   }
@@ -97,6 +103,12 @@ function AdminProductsPage() {
 
       {importing && <p className="import-report">Importerar...</p>}
       {importError && <p className="form-error">{importError}</p>}
+      {searchWarning && (
+        <p className="form-error">
+          Produkten är sparad, men sökindexet kunde inte uppdateras. Sökningen
+          kan visa gammal information tills det fungerar igen.
+        </p>
+      )}
       {importReport && (
         <section className="import-report">
           <h2>Import från {importReport.format.toUpperCase()}</h2>

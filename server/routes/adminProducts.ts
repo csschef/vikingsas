@@ -49,6 +49,9 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
+    if (!req.body.sku) {
+      return res.status(400).json({ status: 'fel', error: 'Artikelnummer saknas' })
+    }
     const newProduct = await pool.query(
       `INSERT INTO products (
       title,
@@ -65,8 +68,9 @@ router.post('/', async (req, res) => {
       carbohydrate_g,
       sugars_g,
       protein_g,
-      salt_g)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      salt_g,
+      sku)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *`,
       [
         req.body.title,
@@ -83,10 +87,14 @@ router.post('/', async (req, res) => {
         req.body.carbohydrate_g,
         req.body.sugars_g,
         req.body.protein_g,
-        req.body.salt_g
+        req.body.salt_g,
+        req.body.sku
       ]
     )
-    res.status(201).json({ product: newProduct.rows[0] })
+    const product = newProduct.rows[0]
+    const searchIndexed = await updateSearchIndex(product)
+    res.status(201).json({ product, searchIndexed })
+
   }
   catch (error) {
     res.status(500).json({
