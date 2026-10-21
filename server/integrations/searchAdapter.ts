@@ -19,11 +19,11 @@ const TIMEOUTS = { connect: 2000, read: 5000, write: 10000 }
 // Nycklarna läses först när de behövs, så att resten av servern startar även om de saknas
 function getConfig() {
   const appId = process.env.ALGOLIA_APP_ID
-  const adminKey = process.env.ALGOLIA_ADMIN_KEY
+  const adminKey = process.env.ALGOLIA_WRITE_KEY
   const searchKey = process.env.ALGOLIA_SEARCH_KEY
   const indexName = process.env.ALGOLIA_INDEX
   if (!appId || !adminKey || !searchKey || !indexName) {
-    throw new Error('ALGOLIA_APP_ID, ALGOLIA_ADMIN_KEY, ALGOLIA_SEARCH_KEY eller ALGOLIA_INDEX saknas i miljövariablerna')
+    throw new Error('ALGOLIA_APP_ID, ALGOLIA_WRITE_KEY, ALGOLIA_SEARCH_KEY eller ALGOLIA_INDEX saknas i miljövariablerna')
   }
   return { appId, adminKey, searchKey, indexName }
 }
