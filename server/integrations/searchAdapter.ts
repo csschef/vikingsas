@@ -61,3 +61,33 @@ export async function indexProducts(products: ProductRow[]): Promise<number> {
   await client.saveObjects({ indexName, objects: records, waitForTasks: true })
   return records.length
 }
+
+export async function searchProducts(query: string, page: number, pageSize: number) {
+  const { appId, searchKey, indexName } = getConfig()
+  const client = algoliasearch(appId, searchKey, { timeouts: TIMEOUTS })
+
+  // Vi räknar sidor från 1, Algolia från 0
+  const response = await client.searchSingleIndex<SearchRecord>({
+    indexName,
+    searchParams: { query, page: page - 1, hitsPerPage: pageSize },
+  })
+
+  // Tillbaka till butikens format, objectID blir sku igen
+  const products = response.hits.map((hit) => ({
+    id: hit.id,
+    sku: hit.objectID,
+    title: hit.title,
+    description: hit.description,
+    category: hit.category,
+    price: hit.price,
+    heat_level: hit.heat_level,
+    image_url: hit.image_url,
+    stock: hit.stock,
+  }))
+
+  const total = response.nbHits ?? 0
+  return {
+    products,
+    meta: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+  }
+}
