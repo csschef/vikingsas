@@ -29,7 +29,7 @@ function getConfig() {
 }
 
 // En rad ur products-tabellen. pg ger NUMERIC som text, därför är price en sträng.
-type ProductRow = {
+export type ProductRow = {
   id: number
   sku: string
   title: string
@@ -58,9 +58,19 @@ export async function indexProducts(products: ProductRow[]): Promise<number> {
   }))
 
   // Samma objectID igen uppdaterar produkten i stället för att lägga till en ny
-  await client.saveObjects({ indexName, objects: records, waitForTasks: true })
+  // Utan waitForTasks, annars väntar switchen i admin tills Algolia har lagt in ändringen
+  await client.saveObjects({ indexName, objects: records })
   return records.length
 }
+
+// Tar bort produkter ur sökindexet, till exempel när admin stänger av dem
+export async function removeProducts(skus: string[]): Promise<void> {
+  const { appId, adminKey, indexName } = getConfig()
+  const client = algoliasearch(appId, adminKey, { timeouts: TIMEOUTS })
+
+  await client.deleteObjects({ indexName, objectIDs: skus })
+}
+
 
 export async function searchProducts(query: string, page: number, pageSize: number) {
   const { appId, searchKey, indexName } = getConfig()

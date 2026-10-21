@@ -1,7 +1,24 @@
 import { Router } from 'express'
 import { pool } from '../db.js'
+import { indexProducts, removeProducts, type ProductRow } from '../integrations/searchAdapter.js'
 
 const router = Router()
+
+// Aktiv produkt läggs in i Algolia, avstängd tas bort. false betyder att Algolia inte svarade.
+async function updateSearchIndex(product: ProductRow & { is_active: boolean }): Promise<boolean> {
+  try {
+    if (product.is_active) {
+      await indexProducts([product])
+    } else {
+      await removeProducts([product.sku])
+    }
+    return true
+  } catch (error) {
+    console.error(`Sökindexet uppdaterades inte för ${product.sku}: ${error instanceof Error ? error.message : String(error)}`)
+    return false
+  }
+}
+
 
 router.get('/', async (_req, res) => {
   try {
@@ -124,7 +141,9 @@ router.put('/:id', async (req, res) => {
     if (updatedProduct.rows.length === 0) {
       return res.status(404).json({ status: 'fel', error: 'Produkten finns inte' })
     }
-    res.json({ product: updatedProduct.rows[0] })
+    const product = updatedProduct.rows[0]
+    const searchIndexed = await updateSearchIndex(product)
+    res.json({ product, searchIndexed })
   }
   catch (error) {
     res.status(500).json({
@@ -145,7 +164,9 @@ router.put('/:id/status', async (req, res) => {
     if (updatedProduct.rows.length === 0) {
       return res.status(404).json({ status: 'fel', error: 'Produkten finns inte' })
     }
-    res.json({ product: updatedProduct.rows[0] })
+    const product = updatedProduct.rows[0]
+    const searchIndexed = await updateSearchIndex(product)
+    res.json({ product, searchIndexed })
   } catch (error) {
     res.status(500).json({
       status: 'fel',
