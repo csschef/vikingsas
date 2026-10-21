@@ -1,0 +1,63 @@
+import { algoliasearch } from 'algoliasearch'
+
+// Så ser en produkt ut i Algolia. sku blir objectID.
+type SearchRecord = {
+  objectID: string
+  id: number
+  title: string
+  description: string | null
+  category: string | null
+  price: number
+  heat_level: number | null
+  image_url: string | null
+  stock: number | null
+}
+
+// Algolias egen timeout, i millisekunder
+const TIMEOUTS = { connect: 2000, read: 5000, write: 10000 }
+
+// Nycklarna läses först när de behövs, så att resten av servern startar även om de saknas
+function getConfig() {
+  const appId = process.env.ALGOLIA_APP_ID
+  const adminKey = process.env.ALGOLIA_ADMIN_KEY
+  const searchKey = process.env.ALGOLIA_SEARCH_KEY
+  const indexName = process.env.ALGOLIA_INDEX
+  if (!appId || !adminKey || !searchKey || !indexName) {
+    throw new Error('ALGOLIA_APP_ID, ALGOLIA_ADMIN_KEY, ALGOLIA_SEARCH_KEY eller ALGOLIA_INDEX saknas i miljövariablerna')
+  }
+  return { appId, adminKey, searchKey, indexName }
+}
+
+// En rad ur products-tabellen. pg ger NUMERIC som text, därför är price en sträng.
+type ProductRow = {
+  id: number
+  sku: string
+  title: string
+  description: string | null
+  category: string | null
+  price: string
+  heat_level: number | null
+  image_url: string | null
+  stock: number | null
+}
+
+export async function indexProducts(products: ProductRow[]): Promise<number> {
+  const { appId, adminKey, indexName } = getConfig()
+  const client = algoliasearch(appId, adminKey, { timeouts: TIMEOUTS })
+
+  const records: SearchRecord[] = products.map((product) => ({
+    objectID: product.sku,
+    id: product.id,
+    title: product.title,
+    description: product.description,
+    category: product.category,
+    price: Number(product.price),
+    heat_level: product.heat_level,
+    image_url: product.image_url,
+    stock: product.stock,
+  }))
+
+  // Samma objectID igen uppdaterar produkten i stället för att lägga till en ny
+  await client.saveObjects({ indexName, objects: records, waitForTasks: true })
+  return records.length
+}
