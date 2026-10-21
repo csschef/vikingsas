@@ -1102,6 +1102,12 @@ h2 {
   color: #b3261e;
 }
 
+/* Lika breda så att tabellen inte hoppar när Aktiv blir Inaktiv */
+.admin-products-page .status-pill {
+  min-width: 4.75rem;
+  text-align: center;
+}
+
 .admin-table-actions {
   display: flex;
   align-items: center;
