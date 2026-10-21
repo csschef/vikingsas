@@ -97,6 +97,11 @@ router.post('/', async (req, res) => {
 
   }
   catch (error) {
+    // SEVA todo: Förifyll nästa lediga VS-nummer på Ny produkt, så hamnar admin sällan här.
+    // 23505 är Postgres felkod för att ett unikt värde redan finns
+    if (error instanceof Error && 'code' in error && error.code === '23505') {
+      return res.status(409).json({ status: 'fel', error: 'Artikelnumret finns redan' })
+    }
     res.status(500).json({
       status: 'fel',
       error: error instanceof Error ? error.message : String(error)

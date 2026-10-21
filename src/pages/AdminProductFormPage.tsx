@@ -21,6 +21,8 @@ type ProductFormData = {
   is_active: boolean
 }
 
+type FieldErrors = Partial<Record<keyof ProductFormData, string>>
+
 const emptyProduct: ProductFormData = {
   sku: '',
   title: '',
@@ -41,6 +43,52 @@ const emptyProduct: ProductFormData = {
   is_active: true,
 }
 
+const integerFields = ['volume_ml', 'energy_kj', 'energy_kcal'] as const
+const gramFields = [
+  'fat_g',
+  'saturated_fat_g',
+  'carbohydrate_g',
+  'sugars_g',
+  'protein_g',
+  'salt_g',
+] as const
+
+// Formuläret har noValidate, så det webbläsaren kollade förut kollas här
+function validate(data: ProductFormData): FieldErrors {
+  const errors: FieldErrors = {}
+
+  if (!data.sku.trim()) errors.sku = 'Fyll i artikelnummer'
+  if (!data.title.trim()) errors.title = 'Fyll i titel'
+
+  if (data.price === '') {
+    errors.price = 'Fyll i pris'
+  } else if (!(Number(data.price) > 0)) {
+    errors.price = 'Priset måste vara större än 0'
+  }
+
+  if (data.heat_level !== '') {
+    const heat = Number(data.heat_level)
+    if (!Number.isInteger(heat) || heat < 1 || heat > 10) {
+      errors.heat_level = 'Styrkan ska vara ett heltal från 1 till 10'
+    }
+  }
+
+  for (const field of integerFields) {
+    const value = Number(data[field])
+    if (data[field] !== '' && (!Number.isInteger(value) || value < 0)) {
+      errors[field] = 'Ska vara ett heltal, 0 eller mer'
+    }
+  }
+
+  for (const field of gramFields) {
+    if (data[field] !== '' && !(Number(data[field]) >= 0)) {
+      errors[field] = 'Kan inte vara negativt'
+    }
+  }
+
+  return errors
+}
+
 // Tomma fält skickas som null, en tom sträng går inte att spara i en sifferkolumn
 function toRequestBody(data: ProductFormData) {
   return Object.fromEntries(
@@ -56,6 +104,7 @@ function AdminProductFormPage() {
   const isEditMode = Boolean(id)
   const navigate = useNavigate()
   const [formData, setFormData] = useState<ProductFormData>(emptyProduct)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -92,11 +141,22 @@ function AdminProductFormPage() {
   ) {
     const { name, value } = event.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+    setFieldErrors((prev) => ({ ...prev, [name]: undefined }))
   }
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
+
+    const errors = validate(formData)
+    setFieldErrors(errors)
+    const firstInvalid = Object.keys(errors)[0]
+    if (firstInvalid) {
+      const field = event.currentTarget.elements.namedItem(firstInvalid)
+      if (field instanceof HTMLElement) field.focus()
+      return
+    }
+
     const url = isEditMode ? `/api/admin/products/${id}` : '/api/admin/products'
     const method = isEditMode ? 'PUT' : 'POST'
 
@@ -107,6 +167,10 @@ function AdminProductFormPage() {
     })
       .then(async (res) => {
         const data = await res.json()
+        if (res.status === 409) {
+          setFieldErrors({ sku: data.error })
+          return
+        }
         if (!res.ok) {
           throw new Error(data.error ?? 'Kunde inte spara produkten')
         }
@@ -121,10 +185,15 @@ function AdminProductFormPage() {
       )
   }
 
+  function errorFor(name: keyof ProductFormData) {
+    const message = fieldErrors[name]
+    return message ? <span className="field-error">{message}</span> : null
+  }
+
   return (
     <main className="admin-product-form-page">
       <h1>{isEditMode ? 'Redigera produkt' : 'Ny produkt'}</h1>
-      <form onSubmit={handleSubmit} className="admin-product-form">
+      <form onSubmit={handleSubmit} className="admin-product-form" noValidate>
         <label>
           Artikelnummer
           <input
@@ -133,8 +202,9 @@ function AdminProductFormPage() {
             value={formData.sku}
             onChange={handleChange}
             readOnly={isEditMode}
-            required
+            aria-invalid={Boolean(fieldErrors.sku)}
           />
+          {errorFor('sku')}
         </label>
         <label>
           Titel
@@ -143,8 +213,9 @@ function AdminProductFormPage() {
             name="title"
             value={formData.title}
             onChange={handleChange}
-            required
+            aria-invalid={Boolean(fieldErrors.title)}
           />
+          {errorFor('title')}
         </label>
         <label>
           Beskrivning
@@ -161,7 +232,9 @@ function AdminProductFormPage() {
             name="volume_ml"
             value={formData.volume_ml}
             onChange={handleChange}
+            aria-invalid={Boolean(fieldErrors.volume_ml)}
           />
+          {errorFor('volume_ml')}
         </label>
         <label>
           Pris (kr)
@@ -171,8 +244,9 @@ function AdminProductFormPage() {
             name="price"
             value={formData.price}
             onChange={handleChange}
-            required
+            aria-invalid={Boolean(fieldErrors.price)}
           />
+          {errorFor('price')}
         </label>
         <label>
           Styrka (1-10)
@@ -183,7 +257,9 @@ function AdminProductFormPage() {
             name="heat_level"
             value={formData.heat_level}
             onChange={handleChange}
+            aria-invalid={Boolean(fieldErrors.heat_level)}
           />
+          {errorFor('heat_level')}
         </label>
         <label>
           Bild-URL
@@ -209,7 +285,9 @@ function AdminProductFormPage() {
             name="energy_kj"
             value={formData.energy_kj}
             onChange={handleChange}
+            aria-invalid={Boolean(fieldErrors.energy_kj)}
           />
+          {errorFor('energy_kj')}
         </label>
         <label>
           Energi (kcal)
@@ -218,7 +296,9 @@ function AdminProductFormPage() {
             name="energy_kcal"
             value={formData.energy_kcal}
             onChange={handleChange}
+            aria-invalid={Boolean(fieldErrors.energy_kcal)}
           />
+          {errorFor('energy_kcal')}
         </label>
         <label>
           Fett (g)
@@ -228,7 +308,9 @@ function AdminProductFormPage() {
             name="fat_g"
             value={formData.fat_g}
             onChange={handleChange}
+            aria-invalid={Boolean(fieldErrors.fat_g)}
           />
+          {errorFor('fat_g')}
         </label>
         <label>
           Varav mättat fett (g)
@@ -238,7 +320,9 @@ function AdminProductFormPage() {
             name="saturated_fat_g"
             value={formData.saturated_fat_g}
             onChange={handleChange}
+            aria-invalid={Boolean(fieldErrors.saturated_fat_g)}
           />
+          {errorFor('saturated_fat_g')}
         </label>
         <label>
           Kolhydrat (g)
@@ -248,7 +332,9 @@ function AdminProductFormPage() {
             name="carbohydrate_g"
             value={formData.carbohydrate_g}
             onChange={handleChange}
+            aria-invalid={Boolean(fieldErrors.carbohydrate_g)}
           />
+          {errorFor('carbohydrate_g')}
         </label>
         <label>
           Varav sockerarter (g)
@@ -258,7 +344,9 @@ function AdminProductFormPage() {
             name="sugars_g"
             value={formData.sugars_g}
             onChange={handleChange}
+            aria-invalid={Boolean(fieldErrors.sugars_g)}
           />
+          {errorFor('sugars_g')}
         </label>
         <label>
           Protein (g)
@@ -268,7 +356,9 @@ function AdminProductFormPage() {
             name="protein_g"
             value={formData.protein_g}
             onChange={handleChange}
+            aria-invalid={Boolean(fieldErrors.protein_g)}
           />
+          {errorFor('protein_g')}
         </label>
         <label>
           Salt (g)
@@ -278,7 +368,9 @@ function AdminProductFormPage() {
             name="salt_g"
             value={formData.salt_g}
             onChange={handleChange}
+            aria-invalid={Boolean(fieldErrors.salt_g)}
           />
+          {errorFor('salt_g')}
         </label>
         {error && <p className="form-error">{error}</p>}
         <button type="submit">

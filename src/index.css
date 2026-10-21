@@ -1212,6 +1212,7 @@ h2 {
 
 .admin-product-form label {
   display: grid;
+  align-content: start;
   gap: 0.5rem;
   color: var(--muted);
   font-size: 0.8rem;
@@ -1254,6 +1255,17 @@ h2 {
 
 .admin-product-form .form-error {
   grid-column: 1 / -1;
+}
+
+.admin-product-form input[aria-invalid='true'] {
+  border-color: #f4020b;
+}
+
+.admin-product-form .field-error {
+  color: #f4020b;
+  font-size: 0.8rem;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .admin-product-form button {
