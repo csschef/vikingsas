@@ -12,6 +12,7 @@ import adminAuthRouter from './routes/adminAuth.js'
 import adminProductsRouter from './routes/adminProducts.js'
 import adminOrdersRouter from './routes/adminOrders.js'
 import adminImportRouter from './routes/adminImport.js'
+import adminSearchRouter from './routes/adminSearch.js'
 import { sessionCookie } from './middleware/sessionCookie.js'
 import { requireAuth } from './middleware/requireAuth.js'
 
@@ -55,6 +56,8 @@ app.use('/api/admin', adminAuthRouter)
 app.use('/api/admin/products', requireAuth, adminProductsRouter)
 app.use('/api/admin/orders', requireAuth, adminOrdersRouter)
 app.use('/api/admin/import', requireAuth, adminImportRouter)
+app.use('/api/admin/search', requireAuth, adminSearchRouter)
+
 
 // Generell felhantering. Om en route kastar ett fel, loggas det och klienten får 500.
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
