@@ -2,6 +2,8 @@
 
 E-handel med tio chilisåser i stigande styrka, från en mild jalapeño till Pepper X. Byggd som skoluppgift i kursen Systemutveckling på Medieinstitutet.
 
+Vidareutvecklad i kursen Integration med 3-partssystem.
+
 Sajten ligger på https://chili-ehandel.vercel.app
 
 ![Startsidan på Vikingsås](docs/screenshots/hero.webp)
@@ -72,6 +74,27 @@ Adminpanelen länkas inte från butiken, den nås på `/admin/logga-in`.
 - sessionsbaserad inloggning och middleware som skyddar admin-routes
 - React Context för antalet i varukorgen
 - deploy med Vercel CLI
+
+## Integrationer
+
+I kursen Integration med 3e partssystem byggde jag vidare på samma butik och kopplade ihop den med externa tjänster. Alla anrop går via Express, varje tjänst har en egen adapter i `server/integrations/` och nycklarna ligger i `.env`.
+
+### Import från leverantören
+
+Admin kan hämta leverantörens produktkatalog som CSV eller XML, med en knapp per format på produktsidan i admin. Varje rad valideras med Zod innan den sparas, och efteråt visas en rapport med nya, uppdaterade och överhoppade produkter. Importen gör upsert på artikelnumret, så en andra import skapar inga dubbletter.
+
+Så här gjorde jag med fälten:
+
+- **Artikelnummer** sparas i en ny kolumn i databasen, `sku` som är unik. Det är den importen använder för att avgöra om produkten redan finns, och den blir `objectID` i Algolia. Mina egna tio såser fick VS-001 till VS-010.
+- **EAN** sparas som text, inte tal annars försvinner nollan i början.
+- **Kategori** sparas i `category` i products så att den kan användas som filter i sökningen. Den borde nog läggas som egen tabell så att samma kategori inte kan stavas på flera sätt (single source of truth).
+- **Pris** har decimalkomma i CSV-filen och decimalpunkt i XML-filen, båda blir samma tal. En produkt utan pris hoppas över (LEV-1037 har "ej satt") och orsaken står i rapporten.
+- **Lagersaldo** som saknas blir `null`, alltså okänt. 0 betyder att varan är slut, och det vet jag inte.
+- **Varianter** sparas som en lista (`TEXT[]`). Där står storleken, till exempel 150 ml och 250 ml.
+- **Uppdaterad** tar jag inte med, butiken har ingen användning för datumet.
+- **Volym och styrka** finns inte hos leverantören. Jag gjorde kolumnerna frivilliga hellre än att gissa ett värde. Men det är en svaghet. Jag får anställa ett team som bedömer styrkan i varje produkt innan de listas i butiken.
+
+En ny import skriver bara över leverantörens fält. Det admin har fyllt i själv, som beskrivning, bild och styrka, ligger kvar.
 
 ## Kom igång
 
