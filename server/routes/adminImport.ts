@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { pool } from '../db.js'
 import { getSupplierCatalog } from '../integrations/supplierAdapter.js'
+import { indexProducts, type ProductRow } from '../integrations/searchAdapter.js'
 
 const router = Router()
 
@@ -48,6 +49,7 @@ router.post('/:format', async (req, res) => {
   let created = 0
   let updated = 0
   const skipped: SkippedProduct[] = []
+  const toIndex: ProductRow[] = []
 
   for (const candidate of candidates) {
     const result = ImportedProductSchema.safeParse(candidate)
@@ -61,7 +63,7 @@ router.post('/:format', async (req, res) => {
 
     const product = result.data
     // Bara leverantörens fält skrivs över. Det admin själv har fyllt i rörs inte.
-    await pool.query(
+    const saved = await pool.query(
       `INSERT INTO products (sku, ean, title, category, price, stock, variants)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (sku) DO UPDATE SET
@@ -70,9 +72,13 @@ router.post('/:format', async (req, res) => {
       category = EXCLUDED.category,
       price = EXCLUDED.price,
       stock = EXCLUDED.stock,
-      variants = EXCLUDED.variants`,
+      variants = EXCLUDED.variants
+      RETURNING *`,
       [product.sku, product.ean, product.title, product.category, product.price, product.stock, product.variants],
     )
+
+    // Avstängda produkter ska inte tillbaka in i sökningen
+    if (saved.rows[0].is_active) toIndex.push(saved.rows[0])
 
     if (knownSkus.has(product.sku)) {
       updated++
@@ -82,7 +88,16 @@ router.post('/:format', async (req, res) => {
     }
   }
 
-  res.json({ format, created, updated, skipped })
+  // Databasen är redan sparad. Svarar inte Algolia får admin veta det i rapporten.
+  let searchIndexed = true
+  try {
+    await indexProducts(toIndex)
+  } catch (error) {
+    console.error(`Sökindexet uppdaterades inte efter importen: ${error instanceof Error ? error.message : String(error)}`)
+    searchIndexed = false
+  }
+
+  res.json({ format, created, updated, skipped, searchIndexed })
 })
 
 export default router

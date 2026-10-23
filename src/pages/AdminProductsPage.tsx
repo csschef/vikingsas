@@ -10,6 +10,7 @@ type ImportReport = {
   created: number
   updated: number
   skipped: { sku: string; reason: string }[]
+  searchIndexed: boolean
 }
 
 function AdminProductsPage() {
@@ -116,6 +117,12 @@ function AdminProductsPage() {
             {importReport.created} nya, {importReport.updated} uppdaterade,{' '}
             {importReport.skipped.length} överhoppade
           </p>
+          {!importReport.searchIndexed && (
+            <p className="form-error">
+              Produkterna är sparade, men sökindexet kunde inte uppdateras.
+              Sökningen kan visa gammal information tills det fungerar igen.
+            </p>
+          )}
           {importReport.skipped.length > 0 && (
             <ul>
               {importReport.skipped.map((item) => (
