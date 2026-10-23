@@ -24,6 +24,29 @@ export type Product = {
   is_active: boolean
 }
 
+// Det /api/search svarar med. Priset är ett tal här, inte text som från databasen.
+export type SearchProduct = {
+  id: number
+  sku: string
+  title: string
+  description: string | null
+  category: string | null
+  price: number
+  heat_level: number | null
+  image_url: string | null
+  stock: number | null
+}
+
+export type SearchResult = {
+  products: SearchProduct[]
+  meta: {
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
+}
+
 export type CartItem = {
   id: number
   product_id: number

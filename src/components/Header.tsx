@@ -24,6 +24,9 @@ function Header() {
         Vikingsås
       </Link>
       <nav className="site-nav">
+        <Link to="/produkter" className="nav-link">
+          Produkter
+        </Link>
         {currencies.length > 1 && (
           <select
             className="currency-select"

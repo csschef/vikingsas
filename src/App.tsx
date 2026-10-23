@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router'
 import HomePage from './pages/HomePage'
+import ProductsPage from './pages/ProductsPage'
 import CheckoutPage from './pages/CheckoutPage'
 import ThankYouPage from './pages/ThankYouPage'
 import CartPage from './pages/CartPage'
@@ -19,6 +20,7 @@ function App() {
         <Routes>
           <Route element={<SiteLayout />}>
             <Route path="/" element={<HomePage />} />
+            <Route path="/produkter" element={<ProductsPage />} />
             <Route path="/kassa" element={<CheckoutPage />} />
             <Route path="/tack" element={<ThankYouPage />} />
             <Route path="/varukorg" element={<CartPage />} />
