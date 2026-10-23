@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
+    "@stripe/react-stripe-js": "^7.0.0",
+    "@stripe/stripe-js": "^10.1.0",
     "algoliasearch": "^5.60.0",
     "bcryptjs": "^3.0.3",
     "connect-pg-simple": "^10.0.0",
@@ -25,6 +27,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router": "^8.3.0",
+    "stripe": "^23.0.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
