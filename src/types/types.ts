@@ -60,10 +60,15 @@ export type Order = {
   id: number
   customer_name: string
   customer_email: string
+  customer_phone: string | null
+  shipping_street: string | null
+  shipping_postal_code: string | null
+  shipping_city: string | null
   total_amount: string
   created_at: string
   items: OrderItem[]
   status: 'Beställd' | 'Behandlas' | 'Levererad' | 'Återbetald'
+  payment_status: 'Obetald' | 'Betald' | 'Avbruten'
 }
 
 export type OrderItem = {

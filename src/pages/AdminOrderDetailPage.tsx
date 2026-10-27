@@ -50,7 +50,15 @@ function AdminOrderDetailPage() {
           <p>Inkom: {formatOrderDate(order.created_at)}</p>
           <p>Kund: {order.customer_name}</p>
           <p>Email: {order.customer_email}</p>
+          <p>Telefon: {order.customer_phone ?? 'Saknas'}</p>
+          <p>
+            Adress:{' '}
+            {order.shipping_street
+              ? `${order.shipping_street}, ${order.shipping_postal_code} ${order.shipping_city}`
+              : 'Saknas'}
+          </p>
           <p>Summa: {formatCurrency(order.total_amount)}</p>
+          <p>Betalning: {order.payment_status}</p>
         </div>
         <table className="admin-table">
           <thead>

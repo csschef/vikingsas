@@ -11,6 +11,12 @@ const statusClass: Record<Order['status'], string> = {
   Återbetald: 'status-refunded',
 }
 
+const paymentClass: Record<Order['payment_status'], string> = {
+  Obetald: 'status-pending',
+  Betald: 'status-active',
+  Avbruten: 'status-inactive',
+}
+
 function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
 
@@ -37,6 +43,7 @@ function AdminOrdersPage() {
             <th>Kund</th>
             <th>Email</th>
             <th>Summa</th>
+            <th>Betalning</th>
             <th>Status</th>
             <th></th>
           </tr>
@@ -48,6 +55,11 @@ function AdminOrdersPage() {
               <td>{order.customer_name}</td>
               <td>{order.customer_email}</td>
               <td>{formatCurrency(order.total_amount)}</td>
+              <td>
+                <span className={`status-pill ${paymentClass[order.payment_status]}`}>
+                  {order.payment_status}
+                </span>
+              </td>
               <td>
                 <span className={`status-pill ${statusClass[order.status]}`}>
                   {order.status}

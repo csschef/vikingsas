@@ -343,11 +343,64 @@ h2 {
   border-color: var(--glow);
 }
 
+.checkout-page input[aria-invalid='true'] {
+  border-color: #f4020b;
+}
+
+.checkout-page .field-error {
+  color: #f4020b;
+  font-size: 0.8rem;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* Postnummer och ort på samma rad. start gör att grannen inte sträcks när en felrad dyker upp. */
+.checkout-form-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 10rem) 1fr;
+  align-items: start;
+  gap: 1rem;
+}
+
+/* Ett input-fält är ungefär 20 tecken brett från början. Här får det krympa till sin kolumn. */
+.checkout-form-row label {
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.checkout-form-row input {
+  width: 100%;
+  min-width: 0;
+}
+
 .checkout-layout {
   display: grid;
   grid-template-columns: 1fr 20rem;
   align-items: start;
   gap: 3rem;
+}
+
+/* Stripes formulär som ett smalt vitt kort. Min-höjden håller platsen medan Stripe laddar, så sidan inte hoppar. */
+.stripe-checkout {
+  max-width: 30rem;
+  min-height: 44rem;
+  overflow: hidden;
+  border-radius: 0.6rem;
+  background: #fff;
+}
+
+.checkout-page button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+/* Smal kolumn i mitten, så tacksidan inte hänger åt vänster */
+.thank-you-page {
+  max-width: 38rem;
+}
+
+.thank-you-page .order-summary {
+  margin-top: 2rem;
 }
 
 .order-summary {
@@ -1278,7 +1331,8 @@ h2 {
 }
 
 /* Lika breda så att tabellen inte hoppar när Aktiv blir Inaktiv */
-.admin-products-page .status-pill {
+.admin-products-page .status-pill,
+.admin-orders-page .status-pill {
   min-width: 4.75rem;
   text-align: center;
 }
