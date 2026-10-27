@@ -14,6 +14,7 @@ import adminProductsRouter from './routes/adminProducts.js'
 import adminOrdersRouter from './routes/adminOrders.js'
 import adminImportRouter from './routes/adminImport.js'
 import adminSearchRouter from './routes/adminSearch.js'
+import stripeWebhookRouter from './routes/stripeWebhook.js'
 import { sessionCookie } from './middleware/sessionCookie.js'
 import { requireAuth } from './middleware/requireAuth.js'
 
@@ -27,6 +28,8 @@ declare module 'express-session' {
 // anropar Vercel den via api/index.ts.
 // Routes behöver /api-prefix eftersom Vercel skickar in hela sökvägen.
 const app = express()
+// Webhooken behöver Stripes råa bytes, därför ligger den före express.json()
+app.use('/api/stripe/webhook', stripeWebhookRouter)
 app.use(cookieParser())
 app.use(express.json())
 
