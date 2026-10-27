@@ -71,3 +71,8 @@ ALTER TABLE orders ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'Obetald' CHE
 UPDATE orders SET payment_status = 'Betald';
 ALTER TABLE orders ADD COLUMN stripe_session_id TEXT UNIQUE;
 ALTER TABLE orders ADD COLUMN cart_id INTEGER REFERENCES carts(id);
+
+ALTER TABLE orders ADD COLUMN customer_phone TEXT;
+ALTER TABLE orders ADD COLUMN shipping_street TEXT;
+ALTER TABLE orders ADD COLUMN shipping_postal_code TEXT;
+ALTER TABLE orders ADD COLUMN shipping_city TEXT;
