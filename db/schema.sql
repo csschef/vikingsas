@@ -66,3 +66,8 @@ ALTER TABLE products ADD COLUMN variants TEXT[] NOT NULL DEFAULT '{}';
 ALTER TABLE products ADD COLUMN is_featured BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE products ALTER COLUMN volume_ml DROP NOT NULL;
 ALTER TABLE products ALTER COLUMN heat_level DROP NOT NULL;
+
+ALTER TABLE orders ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'Obetald' CHECK (payment_status IN ('Obetald', 'Betald', 'Avbruten'));
+UPDATE orders SET payment_status = 'Betald';
+ALTER TABLE orders ADD COLUMN stripe_session_id TEXT UNIQUE;
+ALTER TABLE orders ADD COLUMN cart_id INTEGER REFERENCES carts(id);
