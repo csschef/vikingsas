@@ -6,7 +6,7 @@ const router = Router()
 router.get('/', async (_req, res) => {
   try {
     const orders = await pool.query(
-      `SELECT o.id, o.customer_name, o.customer_email, o.total_amount, o.created_at, o.status,
+      `SELECT o.id, o.customer_name, o.customer_email, o.total_amount, o.created_at, o.status, o.payment_status,
               json_agg(json_build_object(
                 'product_id', oi.product_id,
                 'product_title', oi.product_title,
@@ -30,7 +30,8 @@ router.get('/', async (_req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const order = await pool.query(
-      `SELECT o.id, o.customer_name, o.customer_email, o.total_amount, o.created_at, o.status,
+      `SELECT o.id, o.customer_name, o.customer_email, o.total_amount, o.created_at, o.status, o.payment_status,
+              o.customer_phone, o.shipping_street, o.shipping_postal_code, o.shipping_city,
               json_agg(json_build_object(
                 'product_id', oi.product_id,
                 'product_title', oi.product_title,
