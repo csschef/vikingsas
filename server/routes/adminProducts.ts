@@ -1,8 +1,44 @@
-import { Router } from 'express'
+import { Router, type NextFunction, type Request, type Response } from 'express'
+import multer from 'multer'
 import { pool } from '../db.js'
 import { indexProducts, removeProducts, type ProductRow } from '../integrations/searchAdapter.js'
+import { removeProductImage, uploadProductImage, type ImageType } from '../integrations/storageAdapter.js'
 
 const router = Router()
+
+// Vercel tar emot högst 4,5 MB per anrop, så taket ligger under det
+const MAX_IMAGE_MB = 4
+const upload = multer({ limits: { fileSize: MAX_IMAGE_MB * 1024 * 1024 } })
+
+// Är filen för stor eller trasig svarar vi 400 med ett begripligt fel
+function receiveImage(req: Request, res: Response, next: NextFunction) {
+  upload.single('image')(req, res, (error) => {
+    if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ status: 'fel', error: `Bilden är för stor, max ${MAX_IMAGE_MB} MB` })
+    }
+    if (error) {
+      return res.status(400).json({ status: 'fel', error: 'Filen kunde inte läsas' })
+    }
+    next()
+  })
+}
+
+// Varje filtyp börjar med samma bytes, oavsett vad filen heter
+const JPEG_START = [0xff, 0xd8, 0xff]
+const PNG_START = [0x89, 0x50, 0x4e, 0x47]
+const RIFF_START = [0x52, 0x49, 0x46, 0x46]
+const WEBP_MARK = [0x57, 0x45, 0x42, 0x50]
+
+function startsWith(buffer: Buffer, bytes: number[]) {
+  return bytes.every((byte, i) => buffer[i] === byte)
+}
+
+function detectImageType(buffer: Buffer): ImageType | null {
+  if (startsWith(buffer, JPEG_START)) return 'image/jpeg'
+  if (startsWith(buffer, PNG_START)) return 'image/png'
+  if (startsWith(buffer, RIFF_START) && startsWith(buffer.subarray(8), WEBP_MARK)) return 'image/webp'
+  return null
+}
 
 // Aktiv produkt läggs in i Algolia, avstängd tas bort. false betyder att Algolia inte svarade.
 async function updateSearchIndex(product: ProductRow & { is_active: boolean }): Promise<boolean> {
@@ -184,6 +220,59 @@ router.put('/:id/status', async (req, res) => {
     const product = updatedProduct.rows[0]
     const searchIndexed = await updateSearchIndex(product)
     res.json({ product, searchIndexed })
+  } catch (error) {
+    res.status(500).json({
+      status: 'fel',
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
+})
+
+router.post('/:id/image', receiveImage, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ status: 'fel', error: 'Ingen bild skickades' })
+    }
+    const type = detectImageType(req.file.buffer)
+    if (!type) {
+      return res.status(400).json({ status: 'fel', error: 'Bilden måste vara JPEG, PNG eller WEBP' })
+    }
+
+    const found = await pool.query('SELECT sku, image_path FROM products WHERE id = $1', [req.params.id])
+    if (found.rows.length === 0) {
+      return res.status(404).json({ status: 'fel', error: 'Produkten finns inte' })
+    }
+    const sku = found.rows[0].sku
+    const oldPath = found.rows[0].image_path
+
+    // Inget i databasen är ändrat än, så produkten behåller sin gamla bild om Supabase inte svarar
+    let image
+    try {
+      image = await uploadProductImage(sku, req.file.buffer, type)
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error))
+      return res.status(502).json({ status: 'fel', error: 'Bildtjänsten svarar inte. Produkten har kvar sin gamla bild, försök igen om en stund.' })
+    }
+
+    const updated = await pool.query(
+      'UPDATE products SET image_path = $1, image_url = $2 WHERE id = $3 RETURNING *',
+      [image.path, image.url, req.params.id]
+    )
+
+    // Den gamla filen tas bort först nu, när den nya är uppladdad och sparad
+    if (oldPath) {
+      try {
+        await removeProductImage(oldPath)
+      } catch (error) {
+        // Bilden är redan bytt, den gamla filen blir bara liggande kvar i bucketen
+        console.error(`Gamla bilden ${oldPath} togs inte bort: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+
+    const product = updated.rows[0]
+    const searchIndexed = await updateSearchIndex(product)
+    res.json({ product, searchIndexed })
+
   } catch (error) {
     res.status(500).json({
       status: 'fel',

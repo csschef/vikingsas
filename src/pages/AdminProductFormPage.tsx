@@ -113,6 +113,8 @@ function AdminProductFormPage() {
   const [formData, setFormData] = useState<ProductFormData>(emptyProduct)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [error, setError] = useState('')
+  const [imageError, setImageError] = useState('')
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -150,6 +152,44 @@ function AdminProductFormPage() {
     const { name, value } = event.target
     setFormData((prev) => ({ ...prev, [name]: value }))
     setFieldErrors((prev) => ({ ...prev, [name]: undefined }))
+  }
+
+  function uploadImage(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    // Tömmer väljaren, så att samma fil går att välja igen efter ett fel
+    event.target.value = ''
+    if (!file) return
+    setImageError('')
+    setUploading(true)
+
+    const body = new FormData()
+    body.append('image', file)
+
+    fetch(`/api/admin/products/${id}/image`, { method: 'POST', body })
+      .then(async (res) => {
+        // Vercel stoppar stora filer innan de når servern, och svarar då inte med JSON
+        if (res.status === 413) {
+          throw new Error('Bilden är för stor, max 4 MB')
+        }
+        const data = await res.json()
+        if (!res.ok) {
+          throw new Error(data.error ?? 'Bilden kunde inte laddas upp')
+        }
+        setFormData((prev) => ({ ...prev, image_url: data.product.image_url }))
+        if (data.searchIndexed === false) {
+          setImageError(
+            'Bilden är sparad, men sökindexet kunde inte uppdateras',
+          )
+        }
+      })
+      .catch((error) =>
+        setImageError(
+          error instanceof Error
+            ? error.message
+            : 'Bilden kunde inte laddas upp',
+        ),
+      )
+      .finally(() => setUploading(false))
   }
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
@@ -280,15 +320,35 @@ function AdminProductFormPage() {
           />
           {errorFor('heat_level')}
         </label>
-        <label>
-          Bild-URL
-          <input
-            type="text"
-            name="image_url"
-            value={formData.image_url}
-            onChange={handleChange}
-          />
-        </label>
+        <div className="image-upload">
+          <span className="image-upload-title">Bild</span>
+          {formData.image_url ? (
+            <img src={formData.image_url} alt="Produktens bild" />
+          ) : (
+            <p className="image-upload-hint">Ingen bild än</p>
+          )}
+          {isEditMode ? (
+            <>
+              <label className="image-upload-button">
+                {uploading ? 'Laddar upp...' : 'Välj bild'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={uploadImage}
+                  disabled={uploading}
+                />
+              </label>
+              <p className="image-upload-hint">
+                JPEG, PNG eller WEBP, max 4 MB
+              </p>
+            </>
+          ) : (
+            <p className="image-upload-hint">
+              Spara produkten först, sedan kan du ladda upp en bild.
+            </p>
+          )}
+          {imageError && <span className="field-error">{imageError}</span>}
+        </div>
         <label>
           Ingredienser
           <textarea

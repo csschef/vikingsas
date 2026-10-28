@@ -18,12 +18,19 @@ function getStorage() {
   return supabase.storage.from(bucket)
 }
 
-export type ImageType = 'image/jpeg' | 'image/png'
+export type ImageType = 'image/jpeg' | 'image/png' | 'image/webp'
+
+const EXTENSIONS: Record<ImageType, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+}
+
 
 // Ny unik sökväg varje gång, så att ingen fil skrivs över och ingen gammal bild ligger kvar i cachen
 export async function uploadProductImage(sku: string, buffer: Buffer, type: ImageType) {
   const storage = getStorage()
-  const extension = type === 'image/png' ? 'png' : 'jpg'
+  const extension = EXTENSIONS[type]
   const path = `products/${sku}/${randomUUID()}.${extension}`
 
   const { error } = await storage.upload(path, buffer, { contentType: type, upsert: false })

@@ -1600,6 +1600,85 @@ h2 {
   filter: brightness(1.15);
 }
 
+
+/* Bildrutan i admin */
+/* Bildrutan i admin: miniatyren till vänster, rubrik, knapp och text till höger */
+.image-upload {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  grid-template-rows: auto auto auto 1fr;
+  gap: 0.5rem 1.5rem;
+  justify-items: start;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: #fff;
+}
+
+.image-upload > :not(img) {
+  grid-column: 2;
+}
+
+
+.image-upload-title {
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.image-upload img {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  background: var(--bg);
+
+  width: 8rem;
+  aspect-ratio: 2 / 3;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: #fff;
+}
+
+.image-upload-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* Etiketten är knappen. Filväljaren ligger osynlig ovanpå, så den går att nå med tangentbordet. */
+.admin-product-form .image-upload-button {
+  position: relative;
+  display: inline-block;
+  padding: 0.6rem 1.5rem;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.admin-product-form .image-upload-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.image-upload-button:focus-within {
+  outline: 2px solid var(--glow);
+  outline-offset: 2px;
+}
+
+.image-upload-button:has(input:disabled) {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+
 /* Mobil: bilden överst, texten under */
 
 @media (max-width: 800px) {
