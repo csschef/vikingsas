@@ -538,7 +538,7 @@ h2 {
 .product-card-image {
   display: grid;
   place-items: center;
-  aspect-ratio: 1;
+  aspect-ratio: 2/3;
   background: rgba(246, 239, 232, 0.04);
 }
 
