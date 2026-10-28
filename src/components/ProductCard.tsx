@@ -11,6 +11,8 @@ function ProductCard({ product }: ProductCardProps) {
   const [addedToCart, setAddedToCart] = useState(false)
   const { refreshCount } = useContext(CartContext)
   const { formatPrice } = useContext(CurrencyContext)
+  // Tomt saldo betyder att vi inte vet, och då säljer vi inte
+  const inStock = product.stock !== null && product.stock > 0
 
   function addToCart() {
     fetch('/api/cart', {
@@ -56,8 +58,9 @@ function ProductCard({ product }: ProductCardProps) {
           type="button"
           className={addedToCart ? 'is-added' : ''}
           onClick={addToCart}
+          disabled={!inStock}
         >
-          {addedToCart ? 'Tillagd' : 'Lägg i varukorgen'}
+          {inStock ? (addedToCart ? 'Tillagd' : 'Lägg i varukorgen') : 'Slut i lager'}
         </button>
       </div>
     </article>

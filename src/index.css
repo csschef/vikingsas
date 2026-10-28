@@ -918,6 +918,16 @@ h2 {
   animation: pop 0.35s ease-out;
 }
 
+/* Slut i lager: grå kant i stället för etikettens färg */
+.product-info button:disabled,
+.product-card button:disabled {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--muted);
+  cursor: default;
+  filter: none;
+}
+
 /* Sidfoten */
 
 .site-footer {

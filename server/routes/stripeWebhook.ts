@@ -2,6 +2,9 @@ import express, { Router } from 'express'
 import type Stripe from 'stripe'
 import { pool } from '../db.js'
 import { verifyWebhook } from '../integrations/paymentAdapter.js'
+import { indexProducts, type ProductRow } from '../integrations/searchAdapter.js'
+
+type ChangedProduct = ProductRow & { is_active: boolean }
 
 const router = Router()
 
@@ -21,7 +24,8 @@ router.post('/', express.raw({ type: 'application/json' }), async (req, res) => 
     if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
       // Kort är betalt direkt. Andra betalsätt kan bli klara senare, då kommer async_payment_succeeded.
       if (event.data.object.payment_status === 'paid') {
-        await markPaid(Number(event.data.object.client_reference_id))
+        const changed = await markPaid(Number(event.data.object.client_reference_id))
+        await updateSearchStock(changed)
       }
     } else if (event.type === 'checkout.session.expired') {
       // En betald order ändras aldrig
@@ -39,8 +43,9 @@ router.post('/', express.raw({ type: 'application/json' }), async (req, res) => 
   }
 })
 
-// Allt eller inget: ordern blir betald, lagret minskar och varukorgen töms
-async function markPaid(orderId: number) {
+// Allt eller inget: ordern blir betald, lagret minskar och varukorgen töms.
+// Svarar med produkterna vars saldo ändrades, så att sökningen kan få det nya saldot.
+async function markPaid(orderId: number): Promise<ChangedProduct[]> {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
@@ -53,25 +58,39 @@ async function markPaid(orderId: number) {
     )
     if (updated.rows.length === 0) {
       await client.query('ROLLBACK')
-      return
+      return []
     }
 
     // GREATEST ser till att saldot aldrig blir negativt om någon annan hann köpa samma vara
-    await client.query(
+    const changed = await client.query<ChangedProduct>(
       `UPDATE products p
        SET stock = GREATEST(p.stock - oi.quantity, 0)
        FROM order_items oi
-       WHERE oi.order_id = $1 AND oi.product_id = p.id AND p.stock IS NOT NULL`,
+       WHERE oi.order_id = $1 AND oi.product_id = p.id AND p.stock IS NOT NULL
+       RETURNING p.*`,
       [orderId]
     )
 
     await client.query('DELETE FROM cart_items WHERE cart_id = $1', [updated.rows[0].cart_id])
     await client.query('COMMIT')
+    return changed.rows
   } catch (error) {
     await client.query('ROLLBACK')
     throw error
   } finally {
     client.release()
+  }
+}
+
+// Körs efter COMMIT. Ett fel från Algolia ger ingen 500, ett nytt försök från Stripe hittar ändå ingen obetald order.
+async function updateSearchStock(products: ChangedProduct[]) {
+  const active = products.filter((product) => product.is_active)
+  if (active.length === 0) return
+  try {
+    await indexProducts(active)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error(`Sökindexet fick inte det nya lagersaldot: ${message}`)
   }
 }
 

@@ -52,6 +52,8 @@ function ProductSection({ product, index }: ProductSectionProps) {
   }
 
   const side = index % 2 === 0 ? 'product-left' : 'product-right'
+  // Tomt saldo betyder att vi inte vet, och då säljer vi inte
+  const inStock = product.stock !== null && product.stock > 0
 
   return (
     <section
@@ -116,8 +118,9 @@ function ProductSection({ product, index }: ProductSectionProps) {
           type="button"
           className={addedToCart ? 'is-added' : ''}
           onClick={addToCart}
+          disabled={!inStock}
         >
-          {addedToCart ? '✓ Tillagd' : 'Lägg i varukorgen'}
+          {inStock ? (addedToCart ? '✓ Tillagd' : 'Lägg i varukorgen') : 'Slut i lager'}
         </button>
       </div>
     </section>
