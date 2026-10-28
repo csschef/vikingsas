@@ -142,6 +142,7 @@ function AdminProductsPage() {
             <th>Titel</th>
             <th>Styrka</th>
             <th>Pris</th>
+            <th>Lagersaldo</th>
             <th>Status</th>
             <th>Aktiv / Inaktiv</th>
             <th></th>
@@ -154,6 +155,7 @@ function AdminProductsPage() {
               <td>{product.title}</td>
               <td>{product.heat_level}</td>
               <td>{formatCurrency(product.price)}</td>
+              <td>{product.stock ?? 'Saknas'}</td>
               <td>
                 <span
                   className={

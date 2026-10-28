@@ -7,6 +7,7 @@ type ProductFormData = {
   description: string
   volume_ml: string
   price: string
+  stock: string
   heat_level: string
   image_url: string
   ingredients: string
@@ -29,6 +30,7 @@ const emptyProduct: ProductFormData = {
   description: '',
   volume_ml: '',
   price: '',
+  stock: '',
   heat_level: '',
   image_url: '',
   ingredients: '',
@@ -43,7 +45,12 @@ const emptyProduct: ProductFormData = {
   is_active: true,
 }
 
-const integerFields = ['volume_ml', 'energy_kj', 'energy_kcal'] as const
+const integerFields = [
+  'volume_ml',
+  'energy_kj',
+  'energy_kcal',
+  'stock',
+] as const
 const gramFields = [
   'fat_g',
   'saturated_fat_g',
@@ -119,6 +126,7 @@ function AdminProductFormPage() {
           description: product.description ?? '',
           volume_ml: String(product.volume_ml ?? ''),
           price: product.price ?? '',
+          stock: String(product.stock ?? ''),
           heat_level: String(product.heat_level ?? ''),
           image_url: product.image_url ?? '',
           ingredients: product.ingredients ?? '',
@@ -247,6 +255,17 @@ function AdminProductFormPage() {
             aria-invalid={Boolean(fieldErrors.price)}
           />
           {errorFor('price')}
+        </label>
+        <label>
+          Lagersaldo (st)
+          <input
+            type="number"
+            name="stock"
+            value={formData.stock}
+            onChange={handleChange}
+            aria-invalid={Boolean(fieldErrors.stock)}
+          />
+          {errorFor('stock')}
         </label>
         <label>
           Styrka (1-10)

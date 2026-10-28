@@ -69,8 +69,9 @@ router.post('/', async (req, res) => {
       sugars_g,
       protein_g,
       salt_g,
-      sku)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      sku,
+      stock)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       RETURNING *`,
       [
         req.body.title,
@@ -88,7 +89,8 @@ router.post('/', async (req, res) => {
         req.body.sugars_g,
         req.body.protein_g,
         req.body.salt_g,
-        req.body.sku
+        req.body.sku,
+        req.body.stock
       ]
     )
     const product = newProduct.rows[0]
@@ -128,8 +130,9 @@ router.put('/:id', async (req, res) => {
       sugars_g = $13,
       protein_g = $14,
       salt_g = $15,
-      is_active = $16
-      WHERE id = $17
+      is_active = $16,
+      stock = $17
+      WHERE id = $18
       RETURNING *`,
       [
         req.body.title,
@@ -148,6 +151,7 @@ router.put('/:id', async (req, res) => {
         req.body.protein_g,
         req.body.salt_g,
         req.body.is_active,
+        req.body.stock,
         req.params.id
       ]
     )
