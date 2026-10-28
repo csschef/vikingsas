@@ -76,3 +76,5 @@ ALTER TABLE orders ADD COLUMN customer_phone TEXT;
 ALTER TABLE orders ADD COLUMN shipping_street TEXT;
 ALTER TABLE orders ADD COLUMN shipping_postal_code TEXT;
 ALTER TABLE orders ADD COLUMN shipping_city TEXT;
+
+ALTER TABLE products ADD COLUMN image_path TEXT;
