@@ -62,7 +62,7 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem clamp(1.5rem, 5vw, 5rem);
+  padding: 0.875rem clamp(1.5rem, 5vw, 5rem);
   transition: background-color 0.3s ease-out;
 }
 
@@ -80,6 +80,18 @@ h2 {
 }
 
 .logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.logo img {
+  display: block;
+  width: auto;
+  height: 2.5rem;
+}
+
+.logo-name {
   font-size: 0.95rem;
   font-weight: 700;
 }
@@ -582,9 +594,7 @@ h2 {
   font-variant-numeric: tabular-nums;
 }
 
-/* margin-top: auto trycker ner knappen, så att alla knappar i en rad hamnar i linje */
 .product-card button {
-  margin-top: auto;
   padding: 0.8rem 1rem;
   border: 0;
   border-radius: 999px;
@@ -927,6 +937,68 @@ h2 {
   cursor: default;
   filter: none;
 }
+
+/* Antal och köpknapp */
+
+.add-to-cart {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* margin-top: auto trycker ner lådan, så att alla kort i en rad hamnar i linje */
+.product-card .add-to-cart {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  margin-top: auto;
+}
+
+.quantity-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Två klassnamn i väljaren, så att de här vinner över .product-info button och .product-card button */
+.add-to-cart .quantity-picker button {
+  width: 2rem;
+  height: 2rem;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  line-height: 1;
+  letter-spacing: normal;
+  cursor: pointer;
+  transition: border-color 0.2s ease-out, color 0.2s ease-out;
+}
+
+.add-to-cart .quantity-picker button:hover {
+  border-color: var(--glow);
+  color: var(--glow);
+  filter: none;
+}
+
+.add-to-cart .quantity-picker button:disabled {
+  border-color: var(--line);
+  box-shadow: none;
+  color: var(--text);
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Fast bredd, annars flyttar sig plusknappen när 9 blir 10 */
+.quantity-picker span {
+  min-width: 1.5rem;
+  text-align: center;
+}
+
 
 /* Sidfoten */
 
@@ -1537,6 +1609,27 @@ h2 {
       url('/img/hero-mobile.webp');
   }
 
+  /* Headern får plats på 360px breda skärmar */
+  .site-header {
+    gap: 0.75rem;
+  }
+
+  .logo-name {
+    display: none;
+  }
+
+  .site-nav {
+    gap: 0.75rem;
+  }
+
+  .site-nav .nav-link {
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+  }
+
+  .currency-select {
+    padding: 0.3rem 0.5rem;
+  }
 
   .checkout-layout {
     grid-template-columns: 1fr;
@@ -1554,24 +1647,6 @@ h2 {
 
   .cart-item-sum {
     min-width: 0;
-  }
-
-  .product-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-  }
-
-  .product-card-info {
-    padding: 1rem;
-  }
-
-  .product-card h2 {
-    font-size: 0.9rem;
-  }
-
-  .product-card button {
-    padding: 0.7rem 0.5rem;
-    font-size: 0.75rem;
   }
 
   .pagination {

@@ -21,7 +21,10 @@ function Header() {
   return (
     <header className={`site-header ${isScrolled ? 'is-scrolled' : ''}`}>
       <Link to="/" className="logo">
-        Vikingsås
+        <img src="/img/logo.webp" alt="Vikingsås" width="734" height="739" />
+        <span className="logo-name" aria-hidden="true">
+          Vikingsås
+        </span>
       </Link>
       <nav className="site-nav">
         <Link to="/produkter" className="nav-link">

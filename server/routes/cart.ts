@@ -10,8 +10,11 @@ router.post('/', async (req, res) => {
     if (!sessionId) {
       return res.status(400).json({ status: 'fel', error: 'Ingen session' })
     }
-    const cartId = await getCartId(sessionId)
     const { product_id, quantity } = req.body
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      return res.status(400).json({ status: 'fel', error: 'Antalet måste vara ett heltal, 1 eller mer' })
+    }
+    const cartId = await getCartId(sessionId)
     const result = await pool.query(
       `INSERT INTO cart_items (cart_id, product_id, quantity)
        VALUES ($1, $2, $3)

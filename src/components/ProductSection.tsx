@@ -2,6 +2,7 @@ import type { Product } from '../types/types'
 import { useRef, useState, useEffect, useContext } from 'react'
 import { CartContext } from '../context/CartContext'
 import { CurrencyContext } from '../context/CurrencyContext'
+import QuantityPicker from './QuantityPicker'
 
 type ProductSectionProps = {
   product: Product
@@ -12,6 +13,7 @@ function ProductSection({ product, index }: ProductSectionProps) {
   const sectionRef = useRef<HTMLElement>(null)
   const [visible, setVisible] = useState(false)
   const [addedToCart, setAddedToCart] = useState(false)
+  const [quantity, setQuantity] = useState(1)
   const { refreshCount } = useContext(CartContext)
   const { formatPrice } = useContext(CurrencyContext)
 
@@ -38,13 +40,14 @@ function ProductSection({ product, index }: ProductSectionProps) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ product_id: product.id, quantity: 1 }),
+      body: JSON.stringify({ product_id: product.id, quantity }),
     })
       .then((res) => res.json())
       .then(() => {
         setAddedToCart(true)
         setTimeout(() => setAddedToCart(false), 1000)
         refreshCount()
+        setQuantity(1)
       })
       .catch((error) => {
         console.error('Kunde inte lägga till produkt i varukorgen:', error)
@@ -113,15 +116,27 @@ function ProductSection({ product, index }: ProductSectionProps) {
             </tbody>
           </table>
         </details>
-
-        <button
-          type="button"
-          className={addedToCart ? 'is-added' : ''}
-          onClick={addToCart}
-          disabled={!inStock}
-        >
-          {inStock ? (addedToCart ? '✓ Tillagd' : 'Lägg i varukorgen') : 'Slut i lager'}
-        </button>
+        <div className="add-to-cart">
+          {inStock && (
+            <QuantityPicker
+              value={quantity}
+              max={product.stock ?? 0}
+              onChange={setQuantity}
+            />
+          )}
+          <button
+            type="button"
+            className={addedToCart ? 'is-added' : ''}
+            onClick={addToCart}
+            disabled={!inStock}
+          >
+            {inStock
+              ? addedToCart
+                ? '✓ Tillagd'
+                : 'Lägg i varukorgen'
+              : 'Slut i lager'}
+          </button>
+        </div>
       </div>
     </section>
   )
