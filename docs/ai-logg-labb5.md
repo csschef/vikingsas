@@ -322,3 +322,92 @@ Ny fil: `server/integrations/shippingCarrier.ts`, med tre typer.
 PostNord-adaptern i steg 2 ska följa `ShippingCarrier`. Saknas en funktion, eller har den fel form, säger TypeScript ifrån direkt. Routes och kassan använder bara de här typerna och vet aldrig vilket bolag som ligger bakom.
 
 Nästa steg är PostNord-adaptern för ombud.
+
+---
+
+## Prompt 9 (30 okt 2026)
+
+> Det ser bra ut. Fortsätt.
+
+### Svar
+
+**Steg 2: PostNord-adaptern för ombud**
+
+Det här är AI:ns första version, skriven utifrån vad jag själv vet om PostNords API, utan att läsa dokumentationen först. I steg 3 testar vi den mot sandlådan, och i steg 4 jämför vi med dokumentationen.
+
+Ny fil: `server/integrations/postnordAdapter.ts`
+
+- `findServicePoints(postalCode)` hämtar de fem närmaste ombuden. Funktionen har typen `ShippingCarrier['findServicePoints']`, så TypeScript kontrollerar redan nu att den följer gränssnittet från steg 1. Hela adaptern kopplas ihop med gränssnittet i steg 5, när leveranstiden finns.
+- Anropet: `GET {POSTNORD_API_URL}/rest/businesslocation/v5/servicepoints/nearest/byaddress`, med `apikey`, `returnType=json`, `countryCode=SE`, `postalCode` och `numberOfServicePoints=5` i adressen.
+- Timeout och omförsök sköts av butikens befintliga `fetchJson`: 5 sekunder, och upp till tre försök vid serverfel.
+- Nyckeln skickas i adressen, och `fetchJson` skriver adressen i sina felmeddelanden. Adaptern byter därför ut nyckeln mot `***` innan felet skickas vidare, så att den inte hamnar i serverns loggar.
+- Zod i två nivåer: först att svaret har en lista med ombud, sedan varje ombud för sig. Ett trasigt ombud hoppas över, och resten visas ändå.
+- Svaret görs om till butikens format, `ServicePoint`: id, namn, gatuadress, postnummer, ort och avstånd.
+
+Ändrad fil: `.env.example` har fått `POSTNORD_API_URL=https://atapi2.postnord.com`, sandlådans adress.
+
+Typkontrollen (`tsc`) går igenom.
+
+**Innan steg 3**
+
+Lägg till raden `POSTNORD_API_URL=https://atapi2.postnord.com` i din `.env`. Jag kan varken läsa eller ändra den filen. Sedan kör jag ett kort testskript som anropar `findServicePoints('39365')` och skriver ut svaret. Skriptet läser nyckeln från `.env` men skriver aldrig ut den, och du godkänner kommandot innan det körs.
+
+---
+
+## Prompt 10 (30 okt 2026)
+
+> Raden med POSTNORD_API_URL är redan tillagd. Jag funderar på en sak. Det är om vi ska tillåta frakt utanför Sverige. Jag vet att uppgiften inte kräver det men det blir motsägelsefullt när vi visar valutor för EUR, NOK och DKK i butiken.
+
+### Svar
+
+Bra fångat. Valutaväljaren och frakten säger olika saker i dag: priserna kan visas i EUR, NOK och DKK, men kassan tar bara emot svenska postnummer (fem siffror), och kunden betalar i kronor.
+
+**Vad frakt utanför Sverige skulle kräva**
+
+- Ett fält för land i kassan, och kontroll av postnumret per land. Norge och Danmark har fyra siffror, Finland fem.
+- Egna fraktpriser per land. I PostNords prislista kostar ett paket på 1 kg 379 kr inom EU och 436 kr till Europa utanför EU, mot 115 kr till ett ombud i Sverige. Gränserna för fri frakt skulle inte hålla.
+- Norge ligger utanför EU. Enligt PostNords prislista betalar mottagaren tull, moms och avgiften för importdeklarationen. Chilisås är livsmedel, så reglerna för att föra in mat behöver också ses över.
+- Momsen vid försäljning till andra EU-länder behöver ses över.
+- Leveranstiden ska fungera mellan länder, och den delen av PostNords API har vi inte testat.
+
+**Förslag: bara Sverige, och säg det tydligt**
+
+Valutaväljaren räknar om priserna så att en besökare kan jämföra, men kunden betalar alltid i kronor. Kassan säger redan "Du betalar i svenska kronor." Motsägelsen försvinner om butiken också säger var den skickar:
+
+- I kassan, vid fraktvalet: "Vi skickar bara inom Sverige."
+- I varukorgen, där priserna visas i vald valuta: "Du betalar i svenska kronor, och vi skickar bara inom Sverige."
+
+Adaptern stänger inte dörren. Vill du sälja till resten av Norden senare kan gränssnittet få ett land som parameter, och tabellen `shipping_methods` ett land per rad.
+
+Vill du gå på förslaget? Då läggs texterna in i steg 10, och sedan kör jag testet i steg 3.
+
+---
+
+## Prompt 11 (30 okt 2026)
+
+> Det är rimligt. Jag tycker om att bygga så att det går att skala upp om det behövs utan att hela kodbasen skrivs om. currencyAdapter skrev som en tidigare labb och då skulle jag lägga in flera valutor. Så det var inte ett val jag aktivt gjorde. Hade jag fått välja fritt hade valutorna bara funnits för de länder vi fraktar till. Kör vidare enligt plan.
+
+### Svar
+
+**Beslutat:** frakt bara inom Sverige. Texterna om det läggs in i kassan och varukorgen i steg 10. Gränssnittet och tabellen kan utökas med land senare utan att resten skrivs om.
+
+**Steg 3: test med sandlådenyckeln**
+
+Testskriptet låg utanför projektet. Det gjorde ett rått anrop med samma adress som adaptern bygger, och sedan ett anrop via `findServicePoints('39365')`. Nyckeln byttes ut mot `***` i allt som skrevs ut.
+
+Resultat:
+
+- PostNord svarade `200 OK` med JSON. Nyckeln och sandlådans adress fungerar.
+- Svaret har den form adaptern räknade med: `servicePointInformationResponse.servicePoints`, och varje ombud har `servicePointId`, `name`, `visitingAddress` (`streetName`, `streetNumber`, `postalCode`, `city`) och `routeDistance` i meter.
+- Adaptern gav fem ombud i butikens format. Det närmaste är Ica Supermarket Lindsdal, Kanngjutarvägen 5, 530 meter bort.
+- Inget ombud hoppades över av Zod.
+
+Tre saker i svaret som adaptern inte hanterar än:
+
+1. **Paketboxar kommer med.** Fyra av fem är paketboxar ("Parcel Box Location"), som hämtas med PostNord-appen eller BankID. Bara Ica-butiken är ett bemannat ombud ("Postombud"). Paketboxarna har dessutom en tom lista under `pickup.products`, medan Ica-butiken har `Parcel`. Det kan betyda att boxarna inte tar emot den typ av paket vi skickar. Det kontrollerar jag i dokumentationen i steg 4.
+2. **Orten kommer med versaler,** "KALMAR". Den bör visas som "Kalmar" i kassan.
+3. **Gatunumret kan vara tomt,** till exempel "Lassevägen Miljöhus". Adaptern klarar redan det.
+
+Svaret innehåller också öppettider och koordinater. De används inte nu, men öppettiderna kan visas i kassan om du vill.
+
+Nästa steg är steg 4: jämföra adaptern med PostNords dokumentation, med paketboxarna som första fråga.
