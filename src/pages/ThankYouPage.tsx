@@ -1,13 +1,22 @@
 import { useContext, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { formatCurrency } from '../utils/format'
+import { servicePointAddress } from '../utils/shipping'
 import { CartContext } from '../context/CartContext'
+import type { OrderShipping } from '../types/types'
 
 type Order = {
   id: number
   total_amount: string
   payment_status: 'Obetald' | 'Betald' | 'Avbruten'
   items: { product_title: string; unit_price: string; quantity: number }[]
+} & OrderShipping
+
+function deliveryText(order: Order) {
+  if (order.shipping_method === 'hem') return 'Levereras till din adress.'
+  if (order.service_point_status === 'Vald') return `Hämtas hos ${servicePointAddress(order)}.`
+  if (order.service_point_status === 'Väntar') return 'Vi väljer ett ombud nära din adress. Du får veta vilket när paketet skickas.'
+  return null
 }
 
 // Webhooken från Stripe brukar komma inom några sekunder.
@@ -108,11 +117,20 @@ function ThankYouPage() {
               <span>{formatCurrency(Number(item.unit_price) * item.quantity)}</span>
             </li>
           ))}
+          {order.shipping_method_name && (
+            <li>
+              <span>Frakt, {order.shipping_method_name}</span>
+              <span>{Number(order.shipping_price) === 0 ? 'Fri frakt' : formatCurrency(order.shipping_price ?? 0)}</span>
+            </li>
+          )}
         </ul>
         <p className="summary-total">
           <span>Totalt </span>
           <strong>{formatCurrency(order.total_amount)}</strong>
         </p>
+        {order.payment_status !== 'Avbruten' && deliveryText(order) && (
+          <p className="summary-note">{deliveryText(order)}</p>
+        )}
       </section>
     </main>
   )

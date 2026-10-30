@@ -1,11 +1,5 @@
 import Stripe from 'stripe'
-
-// En rad i ordern, med priset från databasen. pg ger NUMERIC som text, därför är price en sträng.
-export type CheckoutItem = {
-  title: string
-  price: string
-  quantity: number
-}
+import type { PaymentLine } from '../lib/orderTotals.js'
 
 // Så länge kunden har på sig att betala, sedan löper sessionen ut
 const SESSION_MINUTES = 30
@@ -20,7 +14,7 @@ function getStripe() {
   return new Stripe(secretKey, { timeout: 10_000 })
 }
 
-export async function createCheckoutSession(orderId: number, items: CheckoutItem[], customerEmail: string) {
+export async function createCheckoutSession(orderId: number, lines: PaymentLine[], customerEmail: string) {
   const clientUrl = process.env.CLIENT_URL
   if (!clientUrl) {
     throw new Error('CLIENT_URL saknas i miljövariablerna')
@@ -29,13 +23,13 @@ export async function createCheckoutSession(orderId: number, items: CheckoutItem
   const session = await getStripe().checkout.sessions.create({
     mode: 'payment',
     ui_mode: 'embedded_page',
-    // Stripe räknar i öre, 49,90 kr blir 4990
-    line_items: items.map((item) => ({
-      quantity: item.quantity,
+    // Stripe räknar i öre, 49,90 kr blir 4990. Raderna är redan i öre, samma som orderns summa bygger på.
+    line_items: lines.map((line) => ({
+      quantity: line.quantity,
       price_data: {
         currency: 'sek',
-        unit_amount: Math.round(Number(item.price) * 100),
-        product_data: { name: item.title },
+        unit_amount: line.unitAmountOre,
+        product_data: { name: line.name },
       },
     })),
     // Orderns id följer med betalningen, så att webhooken vet vilken order som betalades
@@ -58,7 +52,8 @@ export async function createCheckoutSession(orderId: number, items: CheckoutItem
   if (!session.client_secret) {
     throw new Error('Stripe skickade ingen client_secret')
   }
-  return { sessionId: session.id, clientSecret: session.client_secret }
+  // amountTotal är Stripes egen summa i öre, så att routen kan jämföra den med orderns
+  return { sessionId: session.id, clientSecret: session.client_secret, amountTotal: session.amount_total }
 }
 
 // Kollar att anropet verkligen kommer från Stripe och kastar ett fel om signaturen inte stämmer.

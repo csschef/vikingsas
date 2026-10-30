@@ -20,8 +20,8 @@ export type ShippingOption = {
   amountToFreeShipping: number | null
 }
 
-// Räknar i hela ören, så att jämförelsen med gränsen inte påverkas av avrundning i decimaltal
-function toOre(kronor: number) {
+// Räknar i hela ören, så att jämförelser och summor inte påverkas av avrundning i decimaltal
+export function toOre(kronor: number) {
   return Math.round(kronor * 100)
 }
 

@@ -47,6 +47,40 @@ export type SearchResult = {
   }
 }
 
+// Det /api/shipping/options svarar med
+export type ShippingMethodCode = 'ombud' | 'hem'
+
+export type ShippingOption = {
+  code: ShippingMethodCode
+  name: string
+  price: number
+  regularPrice: number
+  freeFrom: number | null
+  amountToFreeShipping: number | null
+  estimatedDelivery: string | null
+}
+
+export type ServicePoint = {
+  id: string
+  kind: 'servicePoint' | 'parcelBox'
+  name: string
+  street: string
+  postalCode: string
+  city: string
+  countryCode: string
+  distanceMeters: number | null
+  coordinates: { latitude: number; longitude: number } | null
+  openingHours: { day: number; opens: string; closes: string }[]
+  pickupRequirements: string[]
+}
+
+export type ShippingQuote = {
+  options: ShippingOption[]
+  servicePoints: ServicePoint[]
+  servicePointStatus: 'found' | 'none' | 'manual' | 'unverified'
+  unavailableKinds: ServicePoint['kind'][]
+}
+
 export type CartItem = {
   id: number
   product_id: number
@@ -69,6 +103,20 @@ export type Order = {
   items: OrderItem[]
   status: 'Beställd' | 'Behandlas' | 'Levererad' | 'Återbetald'
   payment_status: 'Obetald' | 'Betald' | 'Avbruten'
+} & OrderShipping
+
+// Frakten som den sparades på ordern. Tom på ordrar från innan frakten fanns.
+export type OrderShipping = {
+  shipping_method?: ShippingMethodCode | null
+  shipping_method_name?: string | null
+  shipping_price?: string | null
+  service_point_status?: 'Vald' | 'Väntar' | null
+  service_point_id?: string | null
+  service_point_country_code?: string | null
+  service_point_name?: string | null
+  service_point_street?: string | null
+  service_point_postal_code?: string | null
+  service_point_city?: string | null
 }
 
 export type OrderItem = {

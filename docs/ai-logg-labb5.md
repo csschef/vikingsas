@@ -1633,3 +1633,616 @@ Kolumner på `orders` (steg 8), ordern och Stripe (steg 9) och kassan i React (s
 En sak att tänka på till steg 10: varje uppslag ger fyra anrop till PostNord, två för ombud och paketboxar och två för leveranstider. Kassan bör därför bara fråga när postnumret är komplett.
 
 Godkänner du steg 7?
+
+---
+
+## Prompt 30 (30 okt 2026)
+
+> Ja men tänk på detta:
+>
+> Fyra PostNord-anrop per uppslag är acceptabelt för laborationen, men vi ska undvika onödiga upprepningar.
+>
+> Planera för att kassan bara gör uppslag när postnumret är komplett och inte skickar nya förfrågningar vid varje tangenttryckning.
+
+### Svar
+
+**Steg 7: klart**
+
+- **`server/lib/shippingQuote.ts` (ny):** `buildShippingQuote` översätter adapterns utfall till svaret till kassan, enligt förslaget: `servicePointStatus` blir `found`, `none`, `manual` eller `unverified`. Ombud tas bort vid `none`, hemleverans tas bort bara när PostNord uttryckligen säger att den inte erbjuds, och ett ogiltigt postnummer från någon av sökningarna ger `invalidPostalCode`. Funktionen returnerar också loggraderna: "PostNord svarar inte" som varning, och "Integrationsfel mot PostNord" som fel för avvisade anrop och oväntade svar.
+- **`server/routes/shipping.ts` (ny):** `GET /api/shipping/options` och `GET /api/shipping/estimate`. Postnumret och ombudets id kontrolleras med Zod. Varukorgens summa räknas på servern. Fraktalternativen, ombudssökningen och de två leveranstiderna hämtas samtidigt. Ett ogiltigt postnummer ger 400 med "Postnumret finns inte. Kontrollera det." och fältets namn.
+- **`server/app.ts`:** routen är monterad på `/api/shipping`.
+- **`.env.example`:** `SHOP_POSTAL_CODE=39365`. Koden använder 39365 om variabeln saknas.
+- **`server/lib/shippingQuote.test.ts` (ny):** 13 tester, bland annat alla fyra värdena på `servicePointStatus`, ogiltigt postnummer från båda sökningarna, att ett fel i leveranstiden aldrig tar bort hemleverans, och att svaret till kassan aldrig innehåller PostNords skäl men att loggen gör det.
+
+**Resultat:** typkontrollen utan fel, och 77 av 77 tester godkända.
+
+**Uppslagen i kassan, plan för steg 10**
+
+- Kassan frågar först när postnumret är fem siffror och har klarat kassans egen kontroll. Ingen förfrågan skickas medan kunden skriver.
+- Samma postnummer frågas inte igen. Kassan sparar senaste uppslaget, så att en ny rendering, att kunden lämnar fältet eller skriver om samma postnummer inte ger nya anrop.
+- Ändras postnumret medan ett uppslag pågår avbryts det gamla med `AbortController`, så att ett sent svar aldrig skriver över ett nyare.
+- Leveranstiden till ett valt ombud hämtas en gång per ombud och sparas, så att kunden kan byta fram och tillbaka utan nya anrop.
+
+**Prova routen**
+
+Routen har bara testats med låtsade svar. Med din API-server igång kan du öppna de här adresserna i webbläsaren (port 3000, som i `.env.example`):
+
+1. `http://localhost:3000/api/shipping/options?postalCode=39365`: `servicePointStatus` ska vara `found`, med ombud och paketboxar, priserna 69 och 139 kr och beräknad leverans.
+2. `http://localhost:3000/api/shipping/options?postalCode=00000`: 400 med "Postnumret finns inte. Kontrollera det."
+3. `http://localhost:3000/api/shipping/options?postalCode=123`: 400 med "Postnumret ska vara fem siffror".
+4. `http://localhost:3000/api/shipping/estimate?postalCode=39365&servicePointId=331366`: ett datum.
+5. `http://localhost:3000/api/shipping/estimate?postalCode=39365&servicePointId=999999999`: `null`, och en varning i serverns terminal.
+
+Startades API-servern innan PostNords rader lades in i `.env` behöver den startas om, annars blir svaret `manual` utan leveranstider. Säg till vad du får, så går vi vidare till steg 8.
+
+---
+
+## Prompt 31 (30 okt 2026)
+
+> Alla tester går igenom precis som tänkt!
+
+### Svar
+
+Då fungerar routen hela vägen: databasen, PostNord och felhanteringen. Här är förslaget för steg 8. Ingen kod och inget i databasen är ändrat.
+
+**Kolumner på `orders`**
+
+Ordern sparar kopior, inte hänvisningar, på samma sätt som `order_items` sparar produktens titel och pris. Ändras ett fraktpris eller ett ombud senare visar ordern ändå det som gällde när den skapades.
+
+```sql
+ALTER TABLE orders ADD COLUMN shipping_method TEXT CHECK (shipping_method IN ('ombud', 'hem'));
+ALTER TABLE orders ADD COLUMN shipping_method_name TEXT;
+ALTER TABLE orders ADD COLUMN shipping_price NUMERIC(10,2) CHECK (shipping_price >= 0);
+ALTER TABLE orders ADD COLUMN service_point_status TEXT CHECK (service_point_status IN ('Vald', 'Väntar'));
+ALTER TABLE orders ADD COLUMN service_point_id TEXT;
+ALTER TABLE orders ADD COLUMN service_point_country_code TEXT;
+ALTER TABLE orders ADD COLUMN service_point_name TEXT;
+ALTER TABLE orders ADD COLUMN service_point_street TEXT;
+ALTER TABLE orders ADD COLUMN service_point_postal_code TEXT;
+ALTER TABLE orders ADD COLUMN service_point_city TEXT;
+ALTER TABLE orders ADD CONSTRAINT orders_service_point_check CHECK (
+  shipping_method IS NULL
+  OR (shipping_method = 'hem' AND service_point_status IS NULL AND service_point_id IS NULL)
+  OR (shipping_method = 'ombud' AND service_point_status = 'Väntar' AND service_point_id IS NULL)
+  OR (shipping_method = 'ombud' AND service_point_status = 'Vald' AND service_point_id IS NOT NULL)
+);
+```
+
+- `shipping_method` är koden (`ombud` eller `hem`), och `shipping_method_name` namnet som kunden såg.
+- `shipping_price` är det kunden betalade för frakten, 0 vid fri frakt.
+- `service_point_status` är "Vald" eller "Väntar", i samma stil som `payment_status`. Vid hemleverans är den tom.
+- Ombudet sparas med id och landskod, eftersom PostNords id bara är unikt tillsammans med landskoden, och med namn och besöksadress, så att admin och tacksidan kan visa det utan att fråga PostNord.
+- Den sista regeln gör att databasen själv vägrar orimliga kombinationer: hemleverans med ombud, "Vald" utan ombud, eller "Väntar" med ombud.
+- Alla kolumner får vara tomma, eftersom gamla ordrar saknar frakt. Den deployade butiken påverkas inte, eftersom den inte skriver till kolumnerna.
+- Typen av plats (ombud eller paketbox) sparas inte. Namnet säger det redan, till exempel "Paketbox Miljöhus Lassevägen".
+
+**En fråga: ska `total_amount` innehålla frakten?**
+
+Mitt förslag är ja. Då är `total_amount` samma belopp som kunden betalar i Stripe, och admin ser direkt vad kunden betalade. Varornas summa går fortfarande att räkna fram ur `order_items`. Gamla ordrar har ingen frakt, så för dem är summan oförändrad.
+
+**Filer**
+
+Bara `db/schema.sql`, där raderna ovan läggs sist. Koden som skriver till kolumnerna kommer i steg 9.
+
+Godkänner du kolumnerna och förslaget om `total_amount`? Då lägger jag in raderna i `db/schema.sql`, och du kör dem i SQL-editorn i Supabase.
+
+---
+
+## Prompt 32 (30 okt 2026)
+
+> Jag godkänner steg 8 och att `total_amount` ska innehålla fraktkostnaden. Det ska motsvara det totala belopp kunden betalar via Stripe.
+>
+> Jag godkänner också att fraktuppgifterna sparas som en ögonblicksbild på ordern.
+>
+> Jag vill dock ha två justeringar:
+>
+> 1. Gör databasens CHECK-regel något striktare. Vid hemleverans ska samtliga ombudsfält vara NULL, inte bara status och ID. När ett ombud har status `Vald` ska både ombuds-ID och landskod finnas.
+>
+> 2. Kontrollera hur `db/schema.sql` är uppbyggd så att vi inte blandar ihop det fullständiga schemat med migrationskommandon. Jag vill ha tydliga SQL-kommandon som jag kan köra i Supabase SQL Editor utan att påverka befintliga ordrar.
+>
+> Behåll bakåtkompatibiliteten med gamla ordrar.
+>
+> Du får nu genomföra steg 8 i filerna
+
+### Svar
+
+**Beslutat:** `total_amount` innehåller frakten och är samma belopp som kunden betalar i Stripe. Fraktuppgifterna sparas som en ögonblicksbild på ordern.
+
+**Så är `db/schema.sql` uppbyggd**
+
+README:n säger att en ny databas byggs med `db/schema.sql` och sedan `db/seed.sql`. Filen är alltså tänkt att beskriva hela strukturen. Men den är skriven i den ordning ändringarna gjorts: först `CREATE TABLE`, sedan `ALTER TABLE` sist i filen, och dessutom en rad som ändrar data (`UPDATE orders SET payment_status = 'Betald'`). Mot en tom databas fungerar det. Mot den befintliga databasen går den inte att köra, eftersom den stoppar redan vid första `CREATE TABLE`.
+
+Lösningen är att hålla isär de två:
+
+- **`db/schema.sql`** fortsätter beskriva hela strukturen för en tom databas. De nya kolumnerna och reglerna ligger sist, i samma stil som tidigare ändringar.
+- **`db/migrations/`** (ny mapp) innehåller ändringar som körs en gång mot den befintliga databasen, en fil per ändring med datum i namnet.
+
+`UPDATE`-raden i `schema.sql` lämnar jag orörd. Den gör ingenting i en tom databas, men hör egentligen hemma i en migration.
+
+**Nya och ändrade filer**
+
+- **`db/migrations/2026-10-30-orders-shipping.sql` (ny):** den här kör du nu. Den ligger inom `BEGIN` och `COMMIT`, så antingen går allt igenom eller ingenting. Kolumnerna läggs till med `ADD COLUMN IF NOT EXISTS`. Körs filen en gång till stoppar den på reglerna, som redan finns, och då ändras ingenting.
+- **`db/migrations/2026-10-30-shipping-methods.sql` (ny):** tabellen och startvärdena från steg 6, som du redan har kört. Den finns med så att alla ändringar går att följa.
+- **`db/schema.sql`:** samma kolumner och regler sist i filen.
+
+**De två reglerna**
+
+1. **`orders_shipping_check`:** fraktsätt, namn och pris finns antingen alla tre eller inga. Den lade jag till, så att en ny order inte kan sakna fraktpris.
+2. **`orders_service_point_check`,** striktare enligt din justering:
+    - Gamla ordrar och hemleverans: alla sju ombudsfält är tomma, även status.
+    - Ombud med "Väntar": alla sex fält för själva ombudet är tomma, eftersom ombudet väljs i efterhand.
+    - Ombud med "Vald": både ombudets id och landskoden krävs.
+    - Ombud utan status: nekas.
+
+Reglerna räknar ifyllda fält med `num_nonnulls`, en inbyggd funktion i Postgres, så att listan med fält inte behöver skrivas som långa rader med `AND ... IS NULL`.
+
+**Gamla ordrar**
+
+Alla nya kolumner får vara tomma, och båda reglerna godkänner en order där allt som gäller frakt är tomt. Det är just så gamla ordrar ser ut, så de godkänns när reglerna läggs till, och inget i dem ändras. Den deployade butiken skriver inte till kolumnerna, så den påverkas inte heller.
+
+**Så kör du migrationen**
+
+1. Öppna `db/migrations/2026-10-30-orders-shipping.sql`, kopiera allt och kör det i SQL Editor i Supabase.
+2. Kontrollera efteråt:
+
+    ```sql
+    SELECT count(*) AS ordrar, count(shipping_method) AS med_frakt FROM orders;
+    SELECT conname FROM pg_constraint
+    WHERE conrelid = 'orders'::regclass AND conname IN ('orders_shipping_check', 'orders_service_point_check');
+    ```
+
+    `med_frakt` ska vara 0, och båda reglerna ska synas.
+
+**Valfritt innan du kör**
+
+Jag har inte kunnat köra SQL:en själv. Om du vill kan jag först provköra migrationen mot en tillfällig Postgres i minnet (PGlite), installerad i min tillfälliga mapp och inte i projektet. Där kan jag lägga in några låtsade gamla ordrar och visa att de godkänns, och att reglerna stoppar hemleverans med ombud och "Vald" utan landskod. Det kräver att ett paket laddas ner, och du godkänner kommandot först.
+
+---
+
+## Prompt 33 (30 okt 2026)
+
+> migrationen är körd och kontrollen godkänd av mig.
+
+### Svar
+
+Då är databasen klar för frakt på ordern. Här är förslaget för steg 9. Ingen kod är ändrad.
+
+**Vad kassan skickar**
+
+`POST /api/orders` får två nya fält: `shipping_method` (`ombud` eller `hem`) och `service_point_id` (bara vid ombud, och bara siffror). Kassan skickar aldrig något pris.
+
+**Vad servern gör, i den här ordningen**
+
+1. Kontrollerar alla fält med Zod, som i dag.
+2. **Kontrollerar ombudet mot PostNord innan ordern skapas,** så att inget anrop till PostNord görs medan databastransaktionen är öppen:
+
+    | Ombudssökningen ger | Med valt ombud | Utan valt ombud |
+    |---|---|---|
+    | `found`, ombudet finns i listan | "Vald", ombudet sparas | |
+    | `found`, ombudet saknas, alla grupper svarade | 400: "Det valda ombudet finns inte för ditt postnummer. Välj ett annat." | 400: "Välj ett ombud eller en paketbox." |
+    | `found`, ombudet saknas, en grupp svarade inte | "Väntar", eftersom valet inte gick att kontrollera | 400: "Välj ett ombud eller en paketbox." |
+    | `noServicePoints` | 400, samma text som när ombudet saknas | "Väntar" |
+    | `unavailable` | "Väntar", varning i loggen | "Väntar" |
+    | `rejected`, `invalidResponse` | "Väntar", integrationsfel i loggen | "Väntar" |
+    | `invalidPostalCode` | 400 under postnummerfältet | 400 under postnummerfältet |
+
+    Vid hemleverans görs ingen ombudssökning. Servern frågar i stället om leveranstiden för hemleverans, men bara för att kontrollera postnumret: säger PostNord att det inte finns blir det 400 under postnummerfältet. Svarar PostNord inte går köpet igenom.
+3. I transaktionen, som i dag: läser varukorgen, kontrollerar lagret och räknar varornas summa med priserna i databasen.
+4. Räknar fraktpriset med `calculateShipping` utifrån tabellen och varornas summa.
+5. Sparar ordern med `total_amount` = varor + frakt, och alla fraktfält som en ögonblicksbild.
+6. Skapar Stripe-sessionen med frakten som en egen rad, "Frakt: Hemleverans" eller "Frakt: Ombud eller paketbox". Vid fri frakt blir det ingen fraktrad, eftersom beloppet är 0.
+
+**Filer**
+
+- `server/lib/shippingChoice.ts` (ny): beslutet i tabellen ovan, som en funktion utan databas och utan anrop, så att den går att testa.
+- `server/lib/shippingChoice.test.ts` (ny): ett test per rad i tabellen.
+- `server/routes/orders.ts`: de nya fälten, kontrollen före transaktionen, frakten i summan och de nya kolumnerna.
+- `server/integrations/paymentAdapter.ts`: fraktraden i Stripe.
+- `server/integrations/shippingCarrier.ts` och `postnordAdapter.ts`: `ServicePoint` får `countryCode`, hämtad ur PostNords besöksadress. Annars skulle routen behöva skriva "SE" själv, och det är kunskap som hör till adaptern. Adapterns tester uppdateras.
+
+**Att känna till**
+
+Efter steg 9 kräver `POST /api/orders` ett fraktsätt, och dagens kassa skickar inget. Lokalt går det alltså inte att lägga en order förrän kassan är klar i steg 10. Den deployade butiken påverkas inte, eftersom inget deployas förrän i steg 13.
+
+Godkänner du steg 9?
+
+---
+
+## Prompt 34 (30 okt 2026)
+
+> Jag godkänner huvuddelen av steg 9, men vill att du justerar två saker innan implementationen.
+>
+> **1. Bekräftat saknade ombud**
+>
+> I tabellen står att ett resultat där PostNord bekräftat att inga ombud finns kan ge status `Väntar` om kunden inte valt något ombud.
+>
+> Det vill jag inte.
+>
+> Skilj mellan att PostNord inte kunde kontrollera ombuden och att PostNord faktiskt kontrollerade och bekräftade att inga finns.
+>
+> Vid bekräftat saknade ombud ska kunden inte kunna slutföra en order med fraktsätt `ombud`. Kunden får välja hemleverans om den är tillgänglig.
+>
+> Vid tekniska fel kan vi däremot behålla möjligheten till manuell hantering.
+>
+> **2. Orderbelopp och Stripe**
+>
+> Säkerställ att varornas summa plus serverberäknad frakt alltid motsvarar både `orders.total_amount` och beloppet i Stripe.
+>
+> Fraktpriser och gränser för fri frakt ska hämtas från databasen, inte från klienten.
+>
+> Kontrollera också att den befintliga hanteringen av misslyckad Stripe-session fortfarande fungerar korrekt.
+>
+> I övrigt godkänner jag filuppdelningen och teststrategin.
+>
+> Du får genomföra steg 9 efter dessa justeringar.
+
+### Svar
+
+**Steg 9: klart, med båda justeringarna**
+
+**1. Bekräftat saknade ombud**
+
+- Vid ordern: säger PostNord att det inte finns några ombud (`noServicePoints`) nekas ombud alltid, med eller utan valt ombud: 400 under fraktvalet med "Det finns inga ombud eller paketboxar för ditt postnummer. Välj hemleverans."
+- "Väntar" blir det bara när PostNord inte kunde kontrollera: inget svar, avvisat anrop, oväntat svar, eller när valt ombud saknas och en grupp inte svarade.
+- Samma regel gällde inte fullt ut i routen från steg 7. Där blev "inga ombud och ingen hemleverans" manuell hantering. Det är rättat: har PostNord bekräftat att inga ombud finns erbjuds aldrig ombud, även om hemleverans inte heller går. Då får kassan inga fraktalternativ alls. Testet för det fallet är ändrat.
+- Hemleverans som PostNord säger inte erbjuds till postnumret nekas också vid ordern, i samma stil.
+
+**2. Orderbelopp och Stripe**
+
+- Fraktsätt, pris och gräns för fri frakt läses ur `shipping_methods` i databasen. Kassan skickar bara `shipping_method` och `service_point_id`, och Zod tar inte emot något pris.
+- Varornas summa räknas på priserna i databasen, i transaktionen, som förut.
+- **Ny fil `server/lib/orderTotals.ts`:** `buildPaymentLines` gör raderna till betalningen i ören, en per vara och en för frakten. Fri frakt ger ingen fraktrad. Summan av raderna blir `totalOre`.
+- **Samma rader används två gånger:** `orders.total_amount` sparas som `totalOre / 100`, och exakt samma rader skickas till Stripe. Beloppen kan alltså inte skilja sig, eftersom de räknas fram ur samma tal.
+- **Extra kontroll:** Stripe svarar med sin egen summa (`amount_total`). Är den inte exakt `totalOre` räknas det som att betalningen inte gick att starta.
+- `paymentAdapter.ts` tar emot de färdiga raderna i ören, i stället för att räkna om priserna själv.
+
+**Misslyckad Stripe-session**
+
+Så fungerade det före steg 9, och det gör det fortfarande:
+
+- Ordern sparas som "Obetald" i en transaktion. Först efter det anropas Stripe.
+- Misslyckas Stripe får kunden 502 med "Betalningen kunde inte startas just nu. Försök igen om en stund.", och felet loggas på servern.
+- Varukorgen töms inte, eftersom det bara görs i webhooken efter betalning. Kunden kan alltså försöka igen, och då skapas en ny order.
+- Webhooken ändrar bara ordrar som är "Obetald", så en dubbel händelse kan inte ändra en avbruten order.
+
+Det jag ändrade: den misslyckade ordern låg tidigare kvar som "Obetald" för alltid, eftersom det inte fanns någon Stripe-session som kunde gå ut. Med frakt hade en sådan order dessutom kunnat ligga kvar med ombud "Väntar" och se ut att behöva ett ombud i admin. Nu markeras den "Avbruten", men bara om den fortfarande är "Obetald". Misslyckas den markeringen loggas det, och kunden får samma 502 som förut.
+
+**Ordern i övrigt**
+
+- Ombud och postnummer kontrolleras mot PostNord innan transaktionen öppnas, så att databasen aldrig väntar på PostNord.
+- **Ny fil `server/lib/shippingChoice.ts`:** `chooseServicePoint` och `checkHomeDelivery` avgör ombud och hemleverans vid ordern och ger ögonblicksbilden till ordern.
+- **Ny fil `server/lib/shopConfig.ts`:** `shopPostalCode()`, som både routen för kassan och ordern använder.
+- `ServicePoint` har fått `countryCode`, som adaptern tar från PostNords besöksadress. "Vald" sparas med id och landskod.
+- Svaret till kassan har fått `servicePointStatus` ("Vald" eller "Väntar"), så att kassan kan visa rätt text.
+
+**Tester**
+
+- `server/lib/shippingChoice.test.ts` (ny): 11 tester. Bland annat valt ombud som finns, som saknas, som inte gick att kontrollera, ombud utan val, bekräftat inga ombud med och utan val, tekniska fel, loggnivåer, ogiltigt postnummer och hemleverans som inte erbjuds.
+- `server/lib/orderTotals.test.ts` (ny): 5 tester, bland annat att summan är varor plus frakt under gränsen, att fri frakt inte ger någon fraktrad, och att orderns summa alltid är summan av raderna till Stripe.
+- `shippingQuote.test.ts` och `postnordAdapter.test.ts` är uppdaterade för den nya regeln och för `countryCode`.
+
+**Resultat:** typkontrollen utan fel, och 93 av 93 tester godkända. Inga långa streck eller pilar i serverkoden eller SQL-filerna.
+
+**Inte testat än**
+
+`POST /api/orders` har inte körts mot databasen och Stripe, eftersom kassan inte skickar fraktsätt förrän i steg 10. Hela kedjan, med ett testköp, prövas när kassan är klar.
+
+Nästa steg är 10, kassan i React. Godkänner du det?
+
+---
+
+## Prompt 35 (30 okt 2026)
+
+> Ja jag godkänner det! Vi behöver ta hänsyn till vad som händer om kunden ändrar sitt postnummer efter att ha valt ombud.
+
+### Svar
+
+**Steg 10: kassan, klar i koden**
+
+**När kunden ändrar postnumret efter att ha valt ombud**
+
+- Ett valt ombud gäller bara det postnummer det valdes för. Blir postnumret ett annat, eller ofullständigt, tas valet bort direkt, och fraktavsnittet säger "Du har ändrat postnumret. Välj ombud eller paketbox igen." Texten försvinner när kunden väljer ett nytt ombud.
+- "393 65" och "39365" räknas som samma postnummer, så att lägga till eller ta bort mellanslaget tar inte bort valet.
+- Svaret från servern sparas tillsammans med sitt postnummer. Kassan använder bara ett svar som hör till postnumret som står i fältet just nu, så ett svar för ett gammalt postnummer kan aldrig visas eller skickas med ordern.
+- Ombudets id skickas bara om ombudet finns i svaret för det aktuella postnumret. Servern kontrollerar dessutom själv att ombudet hör till postnumret, och nekar annars.
+- Säger servern vid ordern att ombudet eller fraktsättet inte längre går, tas valet bort, felet visas i fraktavsnittet och ombuden hämtas på nytt.
+
+**Uppslagen, som du bad om**
+
+- Kassan frågar först när postnumret är fem siffror. Inga anrop görs medan kunden skriver.
+- Varje postnummer frågas en gång. Svaren sparas, så att byta tillbaka till ett tidigare postnummer inte ger något nytt anrop. Bara misslyckade uppslag sparas inte, så att "Försök igen" frågar på nytt.
+- Ändras postnumret medan ett uppslag pågår avbryts det gamla anropet med `AbortController`.
+- Leveranstiden till ett valt ombud hämtas en gång per ombud och postnummer och sparas.
+
+**Det kunden ser**
+
+- **Fraktavsnittet** under adressen, med "Vi skickar bara inom Sverige."
+- **Fraktsätten** som egna valknappar (`role="radio"`), inte webbläsarens väljare: namn, pris eller "Fri frakt", "Beräknad leverans: måndag 2/11" eller "Beräknad leveranstid är tillfälligt otillgänglig.", och "Handla för 90 kr till för fri frakt." när det fattas något till gränsen.
+- **Ombud och paketboxar** i var sin grupp, med namn, adress och avstånd. Saknas en grupp står det till exempel "Paketboxar kan inte visas just nu."
+- **Valt ombud:** öppettiderna sammanslagna, till exempel "Alla dagar 07.00-22.00" eller "Dygnet runt", "Visa på karta" som öppnar koordinaterna i OpenStreetMap, och för paketboxar "Hämtas med PostNord App eller BankID". Leveranstiden byts till tiden för just det ombudet.
+- **Utan kontrollerade ombud:** vid `manual` "Vi kan inte visa ombud just nu. Vi väljer ett ombud nära din adress åt dig efter beställningen." Vid `unverified` "Leveransalternativet kunde inte kontrolleras just nu. Vi väljer ett ombud nära din adress åt dig efter beställningen."
+- **Ogiltigt postnummer:** "Postnumret finns inte. Kontrollera det." under postnummerfältet, med röd ram.
+- **Inga fraktsätt alls:** "Vi kan tyvärr inte leverera till ditt postnummer."
+- **Ordersammanfattningen** har en rad för frakten, och "Att betala" och momsen räknas med frakten. Det är en förhandsvisning, servern räknar om allt.
+- **Innan ordern skickas** kontrollerar kassan att fraktsätt är valt, att ombud är valt när det krävs, och att uppslaget är klart. Annars visas felet i fraktavsnittet, och fokus flyttas dit.
+- **Varukorgen** säger "Vi skickar bara inom Sverige.", och vid annan valuta "Du betalar i svenska kronor, och vi skickar bara inom Sverige."
+
+**Filer**
+
+- `src/pages/CheckoutPage.tsx`: uppslagen, valen, postnummerbytet och ordern.
+- `src/components/ShippingSection.tsx` (ny): fraktavsnittet.
+- `src/components/ServicePointPicker.tsx` (ny): ombud och paketboxar i grupper.
+- `src/utils/shipping.ts` (ny): postnummer, datum, avstånd, öppettider och kartlänk.
+- `src/types/types.ts`: typerna för svaret från `/api/shipping/options`.
+- `src/pages/CartPage.tsx`: texten om att vi bara skickar inom Sverige.
+- `src/index.css`: nya designvariabler överst (färger, ramar, radier, avstånd, textstorlekar, övergång), och stilarna för fraktavsnittet, som bara använder variablerna. Regeln `.checkout-page button` gav alla knappar i kassan den orange stilen, så den gäller nu bara betalningsknappen, `.checkout-submit`.
+
+**Kontroller**
+
+Typkontrollen utan fel för både frontend och server, och 93 av 93 tester godkända. Lint visar bara två varningar som fanns sedan tidigare, i `CurrencyContext.tsx` och `CartContext.tsx`.
+
+**Prova i webbläsaren**
+
+Kassan har inte provats i en webbläsare än. Med varor i varukorgen:
+
+1. Kassan visar "Fyll i ditt postnummer så visas fraktalternativen."
+2. Skriv 393 65. Öppna fliken Nätverk i utvecklarverktygen: det ska bli ett enda anrop till `/api/shipping/options`, inget medan du skriver.
+3. Välj ombud, och sedan Ica Supermarket Lindsdal: öppettider, "Visa på karta" och ett anrop till `/api/shipping/estimate`.
+4. Välj en paketbox: "Hämtas med PostNord App eller BankID" och "Dygnet runt".
+5. Ändra postnumret till 111 51: valet försvinner, texten om att välja igen visas, och listan gäller Stockholm. Byt tillbaka till 393 65: inget nytt anrop.
+6. Skriv 00000: "Postnumret finns inte. Kontrollera det."
+7. Tryck "Gå till betalning" utan fraktsätt, och sedan med ombud men utan valt ombud.
+8. Kontrollera fraktraden och "Att betala", och att en varukorg över 399 kr ger "Fri frakt" för ombud.
+9. Gå till betalning: Stripe ska visa fraktraden och samma summa som kassan.
+10. Varukorgen ska säga "Vi skickar bara inom Sverige."
+
+Säg till vad du ser, så går vi vidare till steg 11, admin och tacksidan.
+
+---
+
+## Prompt 36 (30 okt 2026)
+
+> *(Skärmdump av Stripes betalformulär: Chilisalsa Rökig, mängd 6, 69,00 kr styck, totalt 414,00 kr, ingen fraktrad.)*
+>
+> Allt funkar men stripe visar bara summan, ingen egen rad för frakt, eller ja, frakten var ju gratis här
+
+### Svar
+
+Det stämmer med hur det är byggt. Varukorgen var 6 × 69 kr = 414 kr, alltså över gränsen på 399 kr för ombud, så frakten blev 0 kr. `buildPaymentLines` lägger bara till en fraktrad när frakten kostar något, så Stripe fick en enda rad. Summan är rätt: varor 414 kr plus frakt 0 kr.
+
+**Två saker att ta ställning till**
+
+1. **Prova med frakt som kostar.** Med en varukorg under 399 kr, till exempel en flaska, ska Stripe visa två rader: varan och "Frakt: Ombud eller paketbox" för 69 kr, och summan ska vara samma som "Att betala" i kassan. Det är det testet som visar att frakten ingår i beloppet i Stripe.
+2. **Visa fri frakt även i Stripe?** Stripes dokumentation säger att en rad på 0 kr är tillåten. Mitt förslag är att fraktraden alltid skickas med, och vid fri frakt som "Frakt: Ombud eller paketbox (fri frakt)" för 0 kr. Då ser kunden i Stripe samma sak som i kassan, och det syns att frakten är med i beräkningen. Summan påverkas inte. Ändringen gäller bara `server/lib/orderTotals.ts` och ett test i `orderTotals.test.ts`.
+
+Vill du att jag gör ändringen i punkt 2?
+
+Källor:
+
+- [Stripe: No-cost orders](https://docs.stripe.com/payments/checkout/no-cost-orders)
+
+---
+
+## Prompt 37 (30 okt 2026)
+
+> *(Skärmdump av Stripes betalformulär: Chilisalsa Rökig, mängd 4, 69,00 kr styck, 276,00 kr. Frakt: Ombud eller paketbox, mängd 1, 69,00 kr. Totalt 345,00 kr.)*
+>
+> Se bilden.
+
+### Svar
+
+Det är precis som det ska vara:
+
+- Varorna kostar 4 × 69 kr = 276 kr, alltså under gränsen på 399 kr för ombud, så frakten kostar 69 kr.
+- Stripe visar frakten som en egen rad, "Frakt: Ombud eller paketbox", med samma namn som i `shipping_methods`.
+- Totalen i Stripe är 345 kr = 276 kr + 69 kr. Det är samma belopp som `total_amount` på ordern, eftersom båda räknas fram ur samma rader i ören.
+
+Därmed är två saker i "Klart när" visade lokalt: att beloppet i Stripe är varor plus frakt, och att fri frakt ger 0 kr när ordervärdet når gränsen (förra skärmdumpen).
+
+Frågan från förra svaret står kvar: ska fraktraden skickas med även vid fri frakt, som "Frakt: Ombud eller paketbox (fri frakt)" för 0 kr? Svara ja eller nej, så gör jag den ändringen eller låter bli, och sedan går vi vidare till steg 11, admin och tacksidan.
+
+---
+
+## Prompt 38 (30 okt 2026)
+
+> Fri frakt behöver inte synas i stripe.
+
+### Svar
+
+**Beslutat:** ingen fraktrad i Stripe vid fri frakt. Koden är redan byggd så, och ingenting ändras.
+
+Här är förslaget för steg 11. Ingen kod är ändrad.
+
+**Tacksidan**
+
+- `GET /api/orders/session/:sessionId` skickar också fraktsätt, fraktpris, ombudsstatus och ombudets namn och adress.
+- Tacksidan visar en rad för frakten ("Fri frakt" eller priset), och under den:
+    - Vid "Vald": "Hämtas hos Ica Supermarket Lindsdal, Kanngjutarvägen 5, 39365 Kalmar".
+    - Vid "Väntar": "Vi väljer ett ombud nära din adress. Du får veta vilket när paketet skickas."
+    - Vid hemleverans: "Levereras till din adress".
+
+**Orderlistan i admin**
+
+- En ny kolumn för frakten: fraktsättets namn och pris.
+- Betalda ordrar med ombudsstatus "Väntar" markeras med "Ombud saknas". Obetalda och avbrutna ordrar markeras inte, eftersom de inte ska skickas.
+
+**Ordersidan i admin**
+
+- Ett avsnitt för frakt med fraktsätt, fraktpris, och vid "Vald" ombudets namn, adress, id och landskod.
+- Vid "Väntar" en knapp, "Hämta ombud". Den hämtar ombud och paketboxar för orderns postnummer via servern och visar dem med samma väljare som i kassan. Admin väljer ett och sparar.
+- **`GET /api/admin/orders/:id/service-points`** (ny, bakom inloggningen): söker ombud för orderns postnummer.
+- **`PUT /api/admin/orders/:id/service-point`** (ny, bakom inloggningen): tar emot ombudets id, söker ombuden för postnumret igen och sparar bara om id:t finns i svaret. Då blir ordern "Vald" med en ögonblicksbild. Uppdateringen gäller bara ordrar som är "Väntar", så ett val som redan är gjort kan inte skrivas över av misstag.
+- Svaren till admin:
+    - PostNord svarar inte: 502, "PostNord svarar inte just nu. Försök igen senare." Ordern står kvar som "Väntar".
+    - Ombudet finns inte för postnumret: 400.
+    - PostNord säger att postnumret inte finns: 400, "Postnumret på ordern finns inte enligt PostNord. Kontakta kunden."
+    - Inga ombud finns: 400, "Det finns inga ombud för orderns postnummer."
+    - Avvisat anrop eller oväntat svar: 502, och ett integrationsfel i loggen.
+
+**Filer**
+
+- `server/lib/shippingChoice.ts`: en ny funktion, `assignServicePoint`, för beslutet när admin sparar ett ombud. Den gör inga anrop, så den går att testa.
+- `server/lib/shippingChoice.test.ts`: tester för den.
+- `server/routes/adminOrders.ts`: fraktfälten i listan och på ordern, och de två nya endpointsen.
+- `server/routes/orders.ts`: fraktfälten till tacksidan.
+- `src/types/types.ts`: fraktfälten på `Order`.
+- `src/pages/ThankYouPage.tsx`, `src/pages/AdminOrdersPage.tsx` och `src/pages/AdminOrderDetailPage.tsx`.
+- `src/index.css`: stilar för fraktavsnitten, med designvariablerna.
+
+En liten sak: rubriken "DAtum" i orderlistan rättas till "Datum", eftersom filen ändå ändras.
+
+Godkänner du steg 11?
+
+---
+
+## Prompt 39 (30 okt 2026)
+
+> Jag godkänner steg 11 med tre tillägg:
+> 1. Granska behörighetskontrollen för GET /api/orders/session/:sessionId och säkerställ att orderuppgifter inte kan hämtas obehörigt. Behåll befintligt fungerande tacksidesflöde.
+> 2. Tilldelning av ombud via admin ska endast tillåtas för betalda, ej avbrutna eller återbetalda ordrar med ombudsstatus Väntar. Validera detta på servern.
+> 3. Gör databasuppdateringen atomär så att två samtidiga administratörer inte kan skriva över varandras ombudsval.
+> Implementera enligt planen, komplettera med tester och redovisa resultatet. Ändra inte andra funktioner i onödan.
+
+### Svar
+
+**Steg 11: klart, med de tre tilläggen**
+
+**1. Behörigheten för tacksidan, `GET /api/orders/session/:sessionId`**
+
+Så var det innan: den som hade Stripes sessions-id fick se ordern, utan någon annan kontroll. Id:t är långt och slumpat, så det går inte att gissa. Men det står i adressen till tacksidan, och kan därför hamna i webbläsarens historik, i en delad länk eller i en skärmdump.
+
+Ändringar:
+
+- Ordern visas bara om den hör till varukorgen i besökarens kaka (`session_id`), som sätts av butiken och inte går att läsa med JavaScript (`httpOnly`). SQL:en kopplar ordern till `carts` och kräver både rätt sessions-id och rätt kaka. Den som bara har länken får "Vi hittade ingen order."
+- Sessions-id:t kontrolleras med Zod, så det måste se ut som ett av Stripes (`cs_` följt av bokstäver, siffror och understreck). Annat ger samma svar som en order som inte finns.
+- Alla misslyckanden ger samma 404, så att svaret inte avslöjar om en order finns.
+- Svaret innehåller inga personuppgifter: inget namn, ingen e-post, ingen adress och inget telefonnummer. Bara ordernummer, summa, betalstatus, varor och frakten. Ombudets adress är en offentlig plats.
+
+Flödet för tacksidan fungerar som förut: kunden kommer tillbaka från Stripe i samma webbläsare, med samma kaka. Varukorgens rad finns kvar efter betalningen, eftersom webhooken bara tömmer varorna i den.
+
+**2. Vilka ordrar som får ett ombud, kontrollerat på servern**
+
+- `assignmentBlocker` i `server/lib/shippingChoice.ts` tillåter bara ordrar där fraktsättet är ombud, ombudsstatusen är "Väntar", betalningen är "Betald" och orderstatusen inte är "Återbetald". En avbruten order är aldrig "Betald", så den nekas också.
+- Både `GET /api/admin/orders/:id/service-points` och `PUT /api/admin/orders/:id/service-point` kontrollerar detta först och svarar 409 med skälet, till exempel "Ordern är inte betald." Då görs inget anrop till PostNord.
+- Ordernumret kontrolleras som ett positivt heltal, och ombudets id som siffror.
+- Admin visar samma regel: "Ombud saknas" i listan bara för betalda ordrar som inte är återbetalda, och på ordern förklaras varför ombud inte kan väljas annars. Det är bara för att admin ska förstå, servern avgör.
+
+**3. Atomär uppdatering**
+
+- Samma villkor står i `WHERE` i `UPDATE`-satsen som sparar ombudet: `shipping_method = 'ombud' AND service_point_status = 'Väntar' AND payment_status = 'Betald' AND status <> 'Återbetald'`. Kontrollen och uppdateringen är alltså ett enda steg i databasen.
+- Försöker två administratörer spara samtidigt får den andra vänta tills den första är klar. Postgres kontrollerar sedan villkoret igen mot den uppdaterade raden. Där är statusen redan "Vald", så ingen rad uppdateras.
+- Uppdateras ingen rad svarar servern 409: "Ordern har ändrats under tiden, till exempel av en annan administratör. Ladda om sidan." Det första valet ligger kvar.
+- Förkontrollen i punkt 2 finns för att ge ett tydligt felmeddelande. Det är villkoret i `UPDATE` som skyddar mot att ett val skrivs över.
+- Regeln `orders_service_point_check` i databasen ser dessutom till att "Vald" alltid har id och landskod.
+
+**Ändrade och nya filer**
+
+- `server/routes/orders.ts`: bara tacksidans route. Kakan, kontrollen av sessions-id:t och fraktfälten.
+- `server/routes/adminOrders.ts`: fraktfälten i listan och på ordern, och de två nya endpointsen. `PUT /:id/status` är oförändrad.
+- `server/lib/shippingChoice.ts`: `assignmentBlocker`, `assignServicePoint` och `servicePointsProblem`, som ger felmeddelandena till admin.
+- `src/types/types.ts`: `OrderShipping`, fraktfälten på ordern.
+- `src/utils/shipping.ts`: `formatPostalCode` och `servicePointAddress`.
+- `src/pages/ThankYouPage.tsx`: fraktraden, och "Hämtas hos ...", "Levereras till din adress." eller "Vi väljer ett ombud nära din adress. Du får veta vilket när paketet skickas."
+- `src/pages/AdminOrdersPage.tsx`: kolumnen Frakt med namn och pris, märkningen "Ombud saknas", och "DAtum" rättat till "Datum".
+- `src/pages/AdminOrderDetailPage.tsx`: avsnittet Frakt, och vid "Väntar" knapparna "Hämta ombud" och "Spara ombud" med samma väljare som i kassan.
+- `src/index.css`: stilarna för fraktavsnittet i admin, med designvariablerna. Ytfärgerna har fått ljusa värden i `.admin-layout`, eftersom admin har ett eget ljust tema.
+
+**Tester**
+
+- `server/lib/shippingChoice.test.ts`: 10 nya tester. Vilka ordrar som får ett ombud: betald och väntande, obetald, avbruten, återbetald, redan vald, hemleverans och gamla ordrar. Vad som sparas: ombud som finns, som saknas, i en grupp som inte svarade, PostNord som inte svarar eller svarar fel, ogiltigt postnummer och inga ombud.
+- Typkontrollen utan fel för frontend och server, 103 av 103 tester godkända, och lint med bara de två gamla varningarna. Inga långa streck eller pilar i koden.
+
+**Inte testat automatiskt**
+
+Kopplingen till kakan och den atomära uppdateringen kräver databasen och har bara testats genom att granska SQL:en. Så här provar du dem:
+
+1. **Tacksidan:** gör ett testköp. Tacksidan ska visa fraktraden och var paketet hämtas. Kopiera adressen till ett inkognitofönster: där ska det stå "Vi hittade ingen order."
+2. **En order som väntar på ombud:** kör det här i SQL Editor på en betald testorder med ombud. Ersätt `ORDER_ID` med orderns nummer:
+
+    ```sql
+    UPDATE orders SET service_point_status = 'Väntar', service_point_id = NULL, service_point_country_code = NULL,
+      service_point_name = NULL, service_point_street = NULL, service_point_postal_code = NULL, service_point_city = NULL
+    WHERE id = ORDER_ID AND shipping_method = 'ombud';
+    ```
+
+    Orderlistan ska visa "Ombud saknas". Öppna ordern, tryck "Hämta ombud", välj ett och tryck "Spara ombud". Ordern ska bli "Vald" med ombudets adress.
+3. **Två administratörer samtidigt:** gör punkt 2 igen, men öppna ordern i två flikar och tryck "Hämta ombud" i båda. Spara i den första och sedan i den andra. Den andra ska få "Ordern har ändrats under tiden ...", och den första fliken ska visa det första valet.
+4. **Obetald order:** en obetald order med "Väntar" ska inte märkas i listan, och ordern ska säga att ombud bara kan väljas för betalda ordrar.
+
+Nästa steg är 12, adminsidan för fraktpriserna.
+
+---
+
+## Prompt 40 (30 okt 2026)
+
+> *(Skärmdump: webbläsaren på `localhost:5174/tack?session_id=cs_test_...` visar "Webbplatsen kan inte nås", `ERR_CONNECTION_REFUSED`.)*
+>
+> Jag har stripe listen på men tacksidan visas inte, jag ser inga fel i konsolen och inga loggar i terminalen.
+
+### Svar
+
+Felet ligger inte i koden. `ERR_CONNECTION_REFUSED` betyder att ingen server svarar på porten.
+
+Jag kontrollerade vilka portar som har en server, utan att läsa `.env`:
+
+- Port 3000: butikens API (`tsx`).
+- Port 5173: butikens Vite.
+- Port 5174: ingenting.
+
+Stripe skickar kunden tillbaka till `CLIENT_URL` från `.env`, och adressen i skärmdumpen visar att den är `http://localhost:5174`. Vite startar på 5173 när porten är ledig och tar 5174 bara om något annat redan använder 5173. Den här gången var 5173 ledig, så Vite hamnade där, och returadressen pekade fel.
+
+Det förklarar också varför inget syns i konsolen eller terminalen: webbläsaren kom aldrig fram till butiken. Betalningen och webhooken påverkas inte, eftersom `stripe listen` skickar vidare till API:et på port 3000.
+
+**Se tacksidan nu**
+
+Byt 5174 mot 5173 i adressen och ladda om. Kakan gäller för `localhost` oavsett port, så tacksidan känner igen din varukorg.
+
+**Så att det inte händer igen, välj ett av två**
+
+1. Ändra `CLIENT_URL` i `.env` till `http://localhost:5173` och starta om API-servern, eftersom `.env` bara läses när den startar.
+2. Lås Vite till port 5174 med `port: 5174` och `strictPort: true` i `vite.config.ts`. Då startar Vite alltid där, och om porten är upptagen får du ett fel i stället för en ny port i tysthet. Det är en liten ändring i koden, så säg till om du vill ha den.
+
+Jag rekommenderar alternativ 2, eftersom returadressen då alltid stämmer, även när ditt andra projekt kör på 5173.
+
+---
+
+## Prompt 41 (30 okt 2026)
+
+> aaah just det, jag ändrade porten för att jag hade ett annat projekt på 5173
+
+### Svar
+
+Då är det förklarat. När det andra projektet körde fick butikens Vite port 5174, och `CLIENT_URL` stämde. I dag är det andra projektet avstängt, så Vite tog 5173, och returadressen pekade på en port där ingenting svarar.
+
+Det är därför jag föreslår att Vite låses till 5174 med `strictPort: true`. Då startar butiken alltid på samma port oavsett vad som kör på 5173, och `CLIENT_URL` stämmer alltid. Säg till om jag ska göra den ändringen. Annars räcker det att byta till 5173 i adressen den här gången.
+
+---
+
+## Prompt 42 (30 okt 2026)
+
+> Det funkar som tänkt efter mina tester
+
+### Svar
+
+Bra. Då är tacksidan, märkningen i admin, valet av ombud i efterhand och skyddet mot samtidiga val provade i webbläsaren.
+
+**Läge för commit**
+
+Steg 7 till 11 är inte committade. Ändrade filer: `.env.example`, `db/schema.sql`, `docs/ai-logg-labb5.md`, `server/app.ts`, `server/integrations/paymentAdapter.ts`, `postnordAdapter.ts`, `postnordAdapter.test.ts`, `shippingCarrier.ts`, `server/lib/shippingPrice.ts`, `server/routes/adminOrders.ts`, `orders.ts`, `src/index.css`, `src/pages/AdminOrderDetailPage.tsx`, `AdminOrdersPage.tsx`, `CartPage.tsx`, `CheckoutPage.tsx`, `ThankYouPage.tsx` och `src/types/types.ts`. Nya filer: `db/migrations/`, `server/lib/orderTotals.ts`, `shippingChoice.ts`, `shippingQuote.ts`, `shopConfig.ts` med tester, `server/routes/shipping.ts`, `src/components/ServicePointPicker.tsx`, `ShippingSection.tsx` och `src/utils/shipping.ts`.
+
+**Förslag för steg 12: adminsidan för fraktpriser**
+
+Ingen kod är ändrad.
+
+- **`GET /api/admin/shipping`** och **`PUT /api/admin/shipping/:code`** i en ny route, `server/routes/adminShipping.ts`, monterad bakom inloggningen som de andra adminroutes.
+- Det som går att ändra: namnet som kunden ser, priset och gränsen för fri frakt. Koden (`ombud`, `hem`) går inte att ändra, eftersom programmet styrs av den.
+- Kontroll med Zod på servern: namnet 1 till 50 tecken, priset 0 kr eller mer med högst två decimaler, gränsen tom (ingen fri frakt) eller större än 0. En okänd kod ger 404. Schemat ligger i `server/lib/shippingPrice.ts`, som inte använder databasen, så det går att testa.
+- **Ny sida `src/pages/AdminShippingPage.tsx`** på `/admin/frakt`, och länken "Frakt" i adminmenyn. En rad per fraktsätt med fälten Namn, Pris (kr) och Fri frakt från (kr), och en knapp "Spara" per rad. Egen validering med fel under fälten, inga bubblor från webbläsaren. "Sparat" visas efter lyckad sparning.
+- Sidan säger "Ändringen gäller nya ordrar. Gamla ordrar behåller fraktpriset de fick.", eftersom ordrarna sparar en ögonblicksbild.
+- Ändrar två administratörer samma pris samtidigt vinner den som sparar sist. Det är okej här, eftersom priset inte bygger på något tidigare värde, till skillnad från ombudsvalet.
+- **Tester:** schemat för ändringen, med giltiga och ogiltiga värden.
+- **Filer:** `server/routes/adminShipping.ts` (ny), `server/app.ts`, `server/lib/shippingPrice.ts` och dess test, `src/pages/AdminShippingPage.tsx` (ny), `src/App.tsx`, `src/components/AdminLayout.tsx`, `src/index.css` och `src/types/types.ts`.
+
+Frågan om att låsa Vite till port 5174 står kvar, om du vill ha det.
+
+Godkänner du steg 12?

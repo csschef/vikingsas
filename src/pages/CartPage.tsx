@@ -8,7 +8,7 @@ import { CurrencyContext } from '../context/CurrencyContext'
 function CartPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const { refreshCount } = useContext(CartContext)
-  const { formatPrice } = useContext(CurrencyContext)
+  const { formatPrice, currency } = useContext(CurrencyContext)
 
   function loadCart() {
     fetch('/api/cart')
@@ -93,6 +93,9 @@ function CartPage() {
           <p className="cart-total">
             <span>Totalt</span>
             <strong>{formatPrice(total)}</strong>
+          </p>
+          <p className="summary-note">
+            {currency === 'SEK' ? 'Vi skickar bara inom Sverige.' : 'Du betalar i svenska kronor, och vi skickar bara inom Sverige.'}
           </p>
           <Link to="/kassa" className="button">
             Gå till kassan

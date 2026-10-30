@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router'
-import type { Order } from '../types/types'
+import type { Order, OrderShipping, ServicePoint } from '../types/types'
 import { formatCurrency } from '../utils/format'
 import { formatOrderDate } from '../utils/format'
+import { servicePointAddress } from '../utils/shipping'
 import StatusDropdown from '../components/StatusDropdown'
+import ServicePointPicker from '../components/ServicePointPicker'
+
+type ServicePointChoices = { servicePoints: ServicePoint[]; unavailableKinds: ServicePoint['kind'][] }
 
 function AdminOrderDetailPage() {
   const { id } = useParams()
   const [order, setOrder] = useState<Order | null>(null)
+  const [choices, setChoices] = useState<ServicePointChoices | null>(null)
+  const [selectedPointId, setSelectedPointId] = useState<string | null>(null)
+  const [loadingPoints, setLoadingPoints] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [shippingError, setShippingError] = useState('')
 
   function changeOrderStatus(newStatus: Order['status']) {
     if (!id) return
@@ -27,6 +36,44 @@ function AdminOrderDetailPage() {
       )
   }
 
+  // Ombuden hämtas via servern för orderns postnummer
+  function loadServicePoints() {
+    if (!id) return
+    setShippingError('')
+    setLoadingPoints(true)
+    fetch(`/api/admin/orders/${id}/service-points`)
+      .then(async (res) => {
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error)
+        setChoices(data)
+      })
+      .catch((error) => setShippingError(error instanceof Error ? error.message : 'Ombuden kunde inte hämtas.'))
+      .finally(() => setLoadingPoints(false))
+  }
+
+  // Servern kontrollerar valet mot PostNord igen och sparar bara om ordern fortfarande väntar på ombud
+  function saveServicePoint() {
+    if (!id || !selectedPointId) return
+    setShippingError('')
+    setSaving(true)
+    fetch(`/api/admin/orders/${id}/service-point`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ service_point_id: selectedPointId }),
+    })
+      .then(async (res) => {
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error)
+        setOrder((prev) => prev && { ...prev, ...(data.order as OrderShipping) })
+        setChoices(null)
+        setSelectedPointId(null)
+      })
+      .catch((error) => setShippingError(error instanceof Error ? error.message : 'Ombudet kunde inte sparas.'))
+      .finally(() => setSaving(false))
+  }
+
   useEffect(() => {
     if (!id) return
     fetch(`/api/admin/orders/${id}`)
@@ -38,6 +85,9 @@ function AdminOrderDetailPage() {
   if (!order) {
     return <div>Laddar beställning...</div>
   }
+
+  // Samma regel som servern: bara betalda ordrar som inte är återbetalda får ett ombud
+  const canAssign = order.payment_status === 'Betald' && order.status !== 'Återbetald'
 
   return (
     <main className="admin-order-detail-page">
@@ -60,6 +110,52 @@ function AdminOrderDetailPage() {
           <p>Summa: {formatCurrency(order.total_amount)}</p>
           <p>Betalning: {order.payment_status}</p>
         </div>
+
+        <section className="admin-shipping">
+          <h2>Frakt</h2>
+          {!order.shipping_method && <p>Ordern lades innan butiken hade frakt.</p>}
+          {order.shipping_method && (
+            <>
+              <p>Fraktsätt: {order.shipping_method_name}</p>
+              <p>Fraktpris: {Number(order.shipping_price) === 0 ? 'Fri frakt' : formatCurrency(order.shipping_price ?? 0)}</p>
+              {order.shipping_method === 'hem' && <p>Levereras till kundens adress.</p>}
+              {order.service_point_status === 'Vald' && (
+                <>
+                  <p>Ombud: {servicePointAddress(order)}</p>
+                  <p>
+                    Ombudets id: {order.service_point_id} ({order.service_point_country_code})
+                  </p>
+                </>
+              )}
+              {order.service_point_status === 'Väntar' && (
+                <>
+                  <p>Ombud: väntar på att väljas.</p>
+                  {!canAssign && <p>Ombud kan bara väljas för betalda ordrar som inte är återbetalda.</p>}
+                  {canAssign && !choices && (
+                    <button type="button" className="button" onClick={loadServicePoints} disabled={loadingPoints}>
+                      {loadingPoints ? 'Hämtar ombud...' : 'Hämta ombud'}
+                    </button>
+                  )}
+                  {canAssign && choices && (
+                    <>
+                      <ServicePointPicker
+                        servicePoints={choices.servicePoints}
+                        unavailableKinds={choices.unavailableKinds}
+                        selectedId={selectedPointId}
+                        onSelect={setSelectedPointId}
+                      />
+                      <button type="button" className="button" onClick={saveServicePoint} disabled={!selectedPointId || saving}>
+                        {saving ? 'Sparar...' : 'Spara ombud'}
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+              {shippingError && <p className="form-error">{shippingError}</p>}
+            </>
+          )}
+        </section>
+
         <table className="admin-table">
           <thead>
             <tr>

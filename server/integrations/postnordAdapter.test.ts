@@ -124,6 +124,7 @@ describe('findServicePoints', () => {
       ],
     )
     assert.deepEqual(result.servicePoints[0].coordinates, { latitude: 56.735562, longitude: 16.2951486 })
+    assert.equal(result.servicePoints[0].countryCode, 'SE')
     assert.deepEqual(result.servicePoints[0].openingHours, [{ day: 1, opens: '07:00', closes: '22:00' }])
     assert.deepEqual(result.servicePoints[1].pickupRequirements, ['PostNord App', 'BankID'])
     // Postnumret skickas utan mellanslag, och ombud och paketboxar hämtas var för sig

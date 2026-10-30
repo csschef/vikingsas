@@ -20,6 +20,7 @@ const ServicePointSchema = z.object({
   servicePointId: z.string(),
   name: z.string(),
   visitingAddress: z.object({
+    countryCode: z.string().optional(),
     streetName: z.string(),
     streetNumber: z.string().optional(),
     postalCode: z.string(),
@@ -174,6 +175,8 @@ function toServicePoint(data: z.infer<typeof ServicePointSchema>, kind: ServiceP
     street: [address.streetName, address.streetNumber].filter(Boolean).join(' '),
     postalCode: address.postalCode,
     city: capitalize(address.city),
+    // Sökningen görs alltid i Sverige, så SE gäller om PostNord inte skickar landskoden
+    countryCode: address.countryCode ?? 'SE',
     distanceMeters: data.routeDistance ?? null,
     coordinates: position ? { latitude: position.northing, longitude: position.easting } : null,
     openingHours: (data.openingHours?.postalServices ?? [])

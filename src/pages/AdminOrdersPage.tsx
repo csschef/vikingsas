@@ -17,6 +17,11 @@ const paymentClass: Record<Order['payment_status'], string> = {
   Avbruten: 'status-inactive',
 }
 
+// Bara ordrar som ska skickas behöver ett ombud, samma regel som servern
+function needsServicePoint(order: Order) {
+  return order.service_point_status === 'Väntar' && order.payment_status === 'Betald' && order.status !== 'Återbetald'
+}
+
 function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
 
@@ -39,10 +44,11 @@ function AdminOrdersPage() {
       <table className="admin-table">
         <thead>
           <tr>
-            <th>DAtum</th>
+            <th>Datum</th>
             <th>Kund</th>
             <th>Email</th>
             <th>Summa</th>
+            <th>Frakt</th>
             <th>Betalning</th>
             <th>Status</th>
             <th></th>
@@ -55,6 +61,14 @@ function AdminOrdersPage() {
               <td>{order.customer_name}</td>
               <td>{order.customer_email}</td>
               <td>{formatCurrency(order.total_amount)}</td>
+              <td>
+                <div className="admin-shipping-cell">
+                  {order.shipping_method_name
+                    ? `${order.shipping_method_name}, ${Number(order.shipping_price) === 0 ? 'fri frakt' : formatCurrency(order.shipping_price ?? 0)}`
+                    : '-'}
+                  {needsServicePoint(order) && <span className="status-pill status-processing">Ombud saknas</span>}
+                </div>
+              </td>
               <td>
                 <span className={`status-pill ${paymentClass[order.payment_status]}`}>
                   {order.payment_status}

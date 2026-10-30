@@ -17,6 +17,8 @@ export type ServicePoint = {
   street: string
   postalCode: string
   city: string
+  // ISO 3166-1, t.ex. "SE". Bolagets id är bara unikt tillsammans med landskoden.
+  countryCode: string
   // I meter från kundens postnummer, null om bolaget inte skickar med avståndet
   distanceMeters: number | null
   coordinates: { latitude: number; longitude: number } | null
