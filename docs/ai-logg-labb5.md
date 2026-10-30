@@ -277,3 +277,48 @@ Källor:
 - [PostNord: Prislista för kunder som köper frakt hos PostNords ombud, gäller från 4 maj 2026](https://api2.postnord.com/rest/customer/v2/ptm/file/download/0000.29748?disposition=inline)
 - [PostNord Home och PostNord Pickup, prisbilaga 2026 i statens ramavtal (Avropa)](https://www.avropa.se/globalassets/bilagor/1.-aktuella-rao/postformedlingstjanster-2021/paketformedlingstjanster--1-lev-postnord/priser-postnord-home-och-pickup--2026.pdf)
 - [PostNord: E-barometern, årsrapport 2025](https://www.postnord.com/insights/reports/e-barometer-2025-annual-report/) (sökt efter hur mycket kunder accepterar att betala för frakt, inga siffror gick att läsa ut)
+
+---
+
+## Prompt 8 (30 okt 2026)
+
+> Jag är nöjd med det svaret. Markera det som beslutat så går vi vidare med implementationen.
+
+### Svar
+
+**Beslutat**
+
+- Ett gemensamt gränssnitt för transportbolag, med PostNord som första adapter. Validering med Zod, allt i TypeScript.
+- Fraktpriserna ligger i databasen, i tabellen `shipping_methods`, och ändras i admin. Ordern sparar en kopia av fraktalternativets namn och det pris kunden betalade.
+- Ombud kostar 69 kr, med fri frakt från 399 kr. Hemleverans kostar 139 kr, med fri frakt från 499 kr.
+- Butikens postnummer är 393 65.
+- Om PostNord inte svarar skapas ordern ändå. Ombud går att välja, och kassan förklarar att ett ombud väljs åt kunden i efterhand. Ordern får ombudsstatus "Väntar". Admin hämtar ombud från PostNord på orderns sida och sparar ett, och då blir statusen "Vald".
+
+**Planen som gäller**
+
+1. Gränssnitt för transportbolag.
+2. PostNord-adaptern, ombud.
+3. Test med sandlådenyckeln.
+4. Jämförelse med PostNords dokumentation, och rättning.
+5. Leveranstid, med samma fyra steg.
+6. Tabellen `shipping_methods` med startvärden, och en funktion som räknar fraktpriset.
+7. Route för kassan.
+8. Nya kolumner på `orders`: fraktalternativ, fraktalternativets namn, fraktpris, ombud och ombudsstatus.
+9. Ordern och Stripe, inklusive "Väntar" när PostNord inte svarar.
+10. Kassan i React, inklusive texten när ombuden inte kan visas.
+11. Admin och tacksidan: frakten på ordern, markering av "Väntar" och knappen "Hämta ombud".
+12. Adminsida för fraktpriserna.
+13. Produktion: nyckeln på Vercel, deploy och "Klart när".
+14. README.
+
+**Steg 1: gränssnitt för transportbolag**
+
+Ny fil: `server/integrations/shippingCarrier.ts`, med tre typer.
+
+- `ServicePoint` är ett ombud i butikens format: id, namn, gatuadress, postnummer, ort och avstånd i meter.
+- `DeliveryEstimate` är beräknad leverans, som ett datum.
+- `ShippingCarrier` beskriver vad ett transportbolag ska kunna: hitta ombud för ett postnummer, och beräkna leverans mellan två postnummer. Båda funktionerna kastar ett fel om bolaget inte svarar, och då vet routen att den ska falla tillbaka på "Väntar".
+
+PostNord-adaptern i steg 2 ska följa `ShippingCarrier`. Saknas en funktion, eller har den fel form, säger TypeScript ifrån direkt. Routes och kassan använder bara de här typerna och vet aldrig vilket bolag som ligger bakom.
+
+Nästa steg är PostNord-adaptern för ombud.
