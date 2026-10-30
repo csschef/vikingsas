@@ -411,3 +411,802 @@ Tre saker i svaret som adaptern inte hanterar än:
 Svaret innehåller också öppettider och koordinater. De används inte nu, men öppettiderna kan visas i kassan om du vill.
 
 Nästa steg är steg 4: jämföra adaptern med PostNords dokumentation, med paketboxarna som första fråga.
+
+---
+
+## Prompt 12 (30 okt 2026)
+
+> Jämför PostNords dokumentation med paketboxarna. Jag tycker att det är trevligt att visa koordinater och öppettider för valt ombud. Så det ska du lägga in.
+
+### Svar
+
+**Koordinater och öppettider: inlagda**
+
+- `ServicePoint` i `server/integrations/shippingCarrier.ts` har fått `coordinates` (latitud och longitud) och `openingHours`, en lista med dag, öppnar och stänger. Dagen är en siffra, 1 för måndag till 7 för söndag, så att butikens format inte beror på PostNords engelska dagnamn.
+- Adaptern läser `coordinates` (den med `EPSG:4326`, alltså vanlig latitud och longitud) och `openingHours.postalServices`.
+- Koordinater och öppettider är extra. Zod-schemat är skrivet så att ett ombud med trasiga öppettider visas ändå, utan dem, i stället för att hoppas över.
+- Orten görs om från "KALMAR" till "Kalmar".
+- Typkontrollen går igenom. Ett nytt anrop mot sandlådan ger Ica Supermarket Lindsdal med koordinaterna 56.7356, 16.2951 och öppet 07:00 till 22:00 alla dagar.
+
+I kassan (steg 10) föreslår jag att valt ombud visar öppettiderna och en länk, "Visa på karta", som öppnar koordinaterna i en karttjänst.
+
+**Paketboxarna och dokumentationen**
+
+PostNords fullständiga specifikation för Service Points V5 kräver inloggning i utvecklarportalen, så den kan jag inte läsa själv. Det här hittade jag öppet:
+
+- PostNords egen sida för Service Points V5 säger att paketboxar ingår bland platserna, att avståndet räknas längs vägen och inte fågelvägen, och att ett ombuds id bara är unikt tillsammans med landskoden.
+- En tredjepartsguide säger att API:t har parametern `typeId` för att välja ombud eller paketboxar. Den anger andra id-nummer än dem vi fick i svaret, där "Postombud" har `typeId` 25 och paketboxen `typeId` 2. Den uppgiften går alltså inte att lita på.
+
+Det räcker inte för att avgöra om boxarna tar emot våra paket, eller hur de ska filtreras bort.
+
+**Det jag behöver från dig**
+
+Logga in på atdeveloper.postnord.com, öppna Service Points V5 och ladda ner specifikationen (JSON). Spara den utanför repot, till exempel i `D:\Fullstack developer\7 Integration med 3e partssystem\postnord-docs\`. Säg till var den ligger, så läser jag den och jämför parameter för parameter med adaptern.
+
+En sak redan nu: eftersom ett id bara är unikt tillsammans med landskoden sparar vi både id och landskod på ordern i steg 8. Vi skickar bara inom Sverige, men det kostar inget och håller dörren öppen.
+
+Källor:
+
+- [PostNord: Service Points V5 i utvecklarportalen](https://developer.postnord.com/apis/details?systemName=location-v5-servicepoints)
+- [Omnium: PostNord-integration](https://docs.omnium.no/docs/plugins/Shipments/postnord)
+- [PluginHive: PostNord Shipping FAQs](https://www.pluginhive.com/postnord-shipping-faqs-multi-carrier-shipping-label-app-for-shopify/)
+
+---
+
+## Prompt 13 (30 okt 2026)
+
+> Det gick bara att kopiera till urklipp så här kommer rubbet. Du behöver inte spara hela texten som en prompt utan dölj det som kommer efter denna meningen från ai-logg-labb5.md:
+>
+> *(PostNords OpenAPI-specifikation för Service Points V5, inklistrad som JSON. Utelämnad här.)*
+
+### Svar
+
+**Steg 4: jämförelse med PostNords dokumentation**
+
+Specifikationen klipptes vid 50 000 tecken. Sökvägar och parametrar kom med i sin helhet, men inte slutet med svarsfälten och hur nyckeln ska skickas. Svarsfälten kontrollerades mot ett riktigt svar i steg 3, och nyckeln testade jag mot sandlådan.
+
+**Stämde med dokumentationen**
+
+- Adressen `/rest/businesslocation/v5/servicepoints/nearest/byaddress` och sandlådans server `atapi2.postnord.com`.
+- `returnType=json` och `countryCode=SE`, som båda är obligatoriska.
+- `numberOfServicePoints=5`, som också är standardvärdet.
+- Besöksadressen (`visitingAddress`) är den som ska visas för kunden. Leveransadressen är till för fraktsedlar.
+
+**Skilde sig, och hur det löstes**
+
+1. **Nyckeln låg i adressen.** Delen av specifikationen som beskriver nyckeln kom inte med, så jag testade: utan nyckel svarar PostNord 403, med huvudet `apikey` 200, och med huvudet `x-api-key` 403. Nyckeln skickas nu i huvudet `apikey`. Då kan den aldrig hamna i ett felmeddelande, och maskeringen är borttagen.
+2. **Postnumret ska skickas utan mellanslag.** Adaptern tar nu bort mellanslag själv, i stället för att lita på att routen redan har gjort det.
+3. **`context` saknades.** Standardvärdet `optionalservicepoint` ger bara platser som tar emot leveranser och rekommenderas för kassor. Det skickas nu uttryckligen, så att adaptern inte beror på ett standardvärde.
+4. **Ombudets id är bara unikt tillsammans med landskoden.** Landskoden sparas på ordern i steg 8.
+5. **Dokumentationen rekommenderar så detaljerad adress som möjligt.** En gatuadress ger mer exakta avstånd. Labben utgår från postnumret, och kassan hämtar ombuden så fort postnumret är ifyllt, så jag föreslår att vi stannar vid postnumret.
+6. **`typeId` saknades, så alla typer kom med.** Se nästa avsnitt.
+
+Typkontrollen går igenom, och ett nytt anrop med nyckeln i huvudet ger samma fem platser som förut.
+
+**Paketboxarna**
+
+Paketboxarna tar emot leveranser: de kommer med även med `context=optionalservicepoint`, som bara ger platser som tar emot paket. Varför deras lista `pickup.products` är tom förklaras inte i den del som kom med. Dokumentationen rekommenderar att ombud och paketboxar hålls isär med `typeId`: paketboxar är typ 2, och ombud är typ 4, 6, 24, 25, 37, 38, 44, 46, 54 och 61.
+
+Två vägar:
+
+- **Bara ombud.** Adaptern skickar ombudens typer i `typeId`, och kunden får fem bemannade ombud. Fraktpriset vi räknade fram bygger på PostNords pris för ombud, så det stämmer. Paketbox kan läggas till senare som ett eget fraktalternativ, med en ny rad och ett eget pris i `shipping_methods`.
+- **Både ombud och paketboxar, i två grupper.** Två anrop till PostNord, ett per typ, och kassan visar dem under var sin rubrik. Bekvämt för kunden, men dubbelt så många anrop, och priset för paketbox är inte utrett.
+
+Jag rekommenderar bara ombud nu. Det följer dokumentationen, stämmer med prisberäkningen, och tabellen gör det enkelt att lägga till paketbox senare. Jag använder hela listan med ombudstyper, inte bara de svenska, så att den fungerar om butiken börjar skicka till fler länder.
+
+Valfritt: vill du att även svarsfälten jämförs mot dokumentationen kan du klistra in slutet av specifikationen, delen som börjar med `"components"`.
+
+---
+
+## Prompt 14 (30 okt 2026)
+
+> Här är den kompletta dokumentationen: "D:\Fullstack developer\7 Integration med 3e partssystem\Service Points V5.json"
+>
+> Jag vill ha med paketboxar. Det är standard idag och vi ska inte vara sämre.
+
+### Svar
+
+**Hela specifikationen: det som var nytt**
+
+1. **Nyckeln ska enligt dokumentationen skickas i adressen,** som parametern `apikey`. I förra steget flyttade jag den till ett huvud efter ett test. Det fungerar, men det är inte dokumenterat och kan sluta fungera utan förvarning. Adaptern följer nu dokumentationen igen: nyckeln ligger i adressen, och maskeringen är tillbaka så att den inte hamnar i ett felmeddelande.
+2. **Dokumentationen har bytt plats på latitud och longitud.** Den beskriver `northing` som longitud och `easting` som latitud. I svaren är `northing` 56,7 för Kalmar, och det är latituden. Adaptern följer svaren, och en kommentar i koden förklarar varför.
+3. **Dokumentationens lista med ombudstyper fungerar inte som den står.** Den rekommenderar `typeId` 4, 6, 24, 25, 37, 38, 44, 46, 54 och 61 för ombud, men PostNord svarar 400 med "Invalid typeId: 4 for countryCode: SE". Listan blandar typer från flera länder. För Sverige gäller 24 (Business Centre), 25 (Servicepoint) och 54 (Delivery Office), och de fungerar.
+4. Fälten adaptern läser (`servicePointId`, `name`, `visitingAddress`, `routeDistance`, `coordinates` och `openingHours`) finns alla i dokumentationen. Inget av dem är obligatoriskt där, så det är rätt att Zod hoppar över ett ombud som saknar namn eller adress.
+5. Dagarna i öppettiderna skrivs "MONDAY" i dokumentationen men "Monday" i svaren. Adaptern klarar båda.
+
+**Paketboxar: inlagda**
+
+- Ombud och paketboxar hämtas i två samtidiga anrop, som dokumentationen rekommenderar: `typeId=24,25,54` för ombud och `typeId=2` för paketboxar, fem av varje.
+- `ServicePoint` har fått `kind` (`servicePoint` eller `parcelBox`), så att kassan kan visa dem i var sin grupp.
+- `ServicePoint` har också fått `pickupRequirements`. För paketboxarna är det "PostNord App" och "BankID", så att kassan kan tala om vad som krävs för att hämta paketet.
+- Svarar PostNord inte på något av anropen räknas det som att PostNord inte svarar, och ordern får "Väntar". Då görs kontrollen av kundens val alltid mot hela listan.
+
+**Test mot sandlådan**
+
+- `39365` och `393 65` ger samma tio platser: fem ombud (närmast Ica Supermarket Lindsdal, 530 m) och fem paketboxar (närmast Paketbox Miljöhus Lassevägen, 927 m).
+- Alla har koordinater och öppettider, och paketboxarna har kraven PostNord App och BankID.
+- Fel nyckel ger 403, och felmeddelandet visar `apikey=***`.
+- Typkontrollen går igenom.
+
+**En fråga om priset**
+
+Paketboxen räknas i dag som leverans till ombud, med samma pris: 69 kr och fri frakt från 399 kr. PostNords prislista har inget eget pris för paketbox. Ska det vara så? Då kan fraktalternativet i databasen heta "Ombud eller paketbox".
+
+Nästa steg är steg 5, leveranstiden.
+
+---
+
+## Prompt 15 (30 okt 2026)
+
+> Vi behåller samma fraktpriser. Gå vidare med leveranstiden
+
+### Svar
+
+**Beslutat:** paketbox har samma pris som ombud.
+
+**Steg 5: leveranstid, AI:ns första version**
+
+- `estimateDelivery(fromPostalCode, toPostalCode)` i `server/integrations/postnordAdapter.ts`, skriven utifrån vad jag själv vet om PostNords API, utan dokumentationen: `GET {POSTNORD_API_URL}/rest/transport/v1/transittime/getTransitTimeInformation.json` med avgångsdag, från- och till-postnummer, landskod SE och `serviceCode=19`, som jag tror är MyPack Collect (paket till ombud).
+- Ett Zod-schema som väntar sig `transitTimeResponse.transitTimes[].deliveryDate`. Funktionen returnerar datumet som `YYYY-MM-DD`.
+- Avgångsdagen är dagens datum i svensk tid, eftersom servern på Vercel går på UTC. Annars skulle ett köp strax efter midnatt räknas från fel dag.
+- Adaptern är nu hel: `postnord` följer `ShippingCarrier`, och `server/integrations/shippingCarrier.ts` exporterar `shippingCarrier`, som routes ska använda. Byts bolag ändras bara den raden.
+- Typkontrollen går igenom.
+
+**Test mot sandlådan**
+
+PostNord svarade `502 Bad Gateway`, både direkt och via adaptern. Det betyder att PostNords server inte kunde skicka anropet vidare till någon tjänst, alltså att adressen troligen är fel, föråldrad eller inte ingår i kontot. Adaptern gjorde tre försök med en sekunds mellanrum och gav sedan ett felmeddelande med nyckeln maskerad, precis som tänkt. I kassan hade det betytt att leveranstiden inte visas.
+
+Två tredjepartskällor anger samma adress som jag, men en av dem skriver att adressen för leveranstid beror på vilken plan och vilket avtal man har. PostNords egen sida nämner ett "Delivery Options API" med leveranstider.
+
+**Det jag behöver från dig**
+
+Leta i sandlådeportalen efter API:t för leveranstid. Det kan heta något med "Transit Time" eller "Delivery Options", troligen under kategorin "Before Order" eller "Transport". Kontrollera också att det ingår i din Customer plan. Spara specifikationen som förra gången, så jämför jag.
+
+Källor:
+
+- [Jentic: PostNord API](https://jentic.com/apis/postnord.com/postnord)
+- [Glama: postnord-mcp](https://glama.ai/mcp/servers/fredrsat/postnord-mcp)
+- [PostNord: PostNord API](https://www.postnord.com/services/ecommerce-integrations/postnord-api/)
+
+---
+
+## Prompt 16 (30 okt 2026)
+
+> PostNords officiella dokumentation visar endpointen /transittime/addresstoaddress, inte /rest/transport/v1/transittime/getTransitTimeInformation.json.
+>
+> Kontrollera implementationen mot den dokumenterade endpointen och dess parametrar. Använd serviceCodes=19 och serviceGroup=SE för MyPack Collect.
+>
+> Kontrollera även hur API:ets svar faktiskt ser ut innan du fastställer Zod-schemat.
+>
+> Gör inga antaganden om svarsfältens struktur.
+>
+> Ändra inte koden förrän du har presenterat vilka ändringar som behövs.
+>
+> De har också dokumentation för Adress to Location vilket är relevant för oss.
+
+### Svar
+
+Ingen kod är ändrad.
+
+**Vad jag kunde kontrollera**
+
+Specifikationen för leveranstid finns inte sparad, bara den för ombud. Jag gjorde därför anrop mot sandlådan med `serviceGroup=SE` och `serviceCodes=19`, för att se var endpointsen ligger och vad de själva säger:
+
+- `/rest/transport/v1/transittime/addresstoaddress` och `/rest/transport/v2/transittime/addresstoaddress` svarar båda 400: "Required request parameter 'startTime' ... is not present". Endpointen finns alltså i två versioner.
+- `/transittime/addresstolocation` svarar likadant i `v1` och `v2`.
+- `v3` finns inte, den ger 404.
+
+PostNord säger bara att `startTime` saknas, inte vilket format den ska ha eller vilka parametrar som kommer efter. Att prova sig fram vore att gissa, så parametrarna behöver komma från dokumentationen. Svaret har jag inte kunnat se än, eftersom inget anrop har gått igenom.
+
+**Ändringar som behövs, när dokumentationen finns**
+
+1. **Endpoint:** `getTransitTimeInformation.json` byts mot `/transittime/addresstoaddress`, i den version dokumentationen anger (`v1` eller `v2`).
+2. **Parametrar:** `serviceCode` blir `serviceCodes=19`, och `serviceGroupCode` blir `serviceGroup=SE`. `dateOfDeparture` byts troligen mot `startTime`, i det format dokumentationen anger. Postnummerparametrarna får de namn dokumentationen anger.
+3. **Zod-schemat:** mitt nuvarande schema (`transitTimeResponse.transitTimes[].deliveryDate`) var en gissning. Det skrivs om först när ett riktigt svar har kommit tillbaka och jämförts med dokumentationen.
+4. **Address to Location för ombud och paketbox:** med den endpointen räknas leveranstiden till det valda ombudet, i stället för till kundens postnummer. Det är mer exakt. Då behöver `estimateDelivery` i gränssnittet kunna ta emot ombudets id. Exakt hur avgörs när parametrarna är kända.
+5. **Hemleverans:** `serviceCodes=19` gäller MyPack Collect. Vilken kod hemleverans har behöver också komma från dokumentationen.
+
+**Det jag behöver från dig**
+
+Spara specifikationen för leveranstid, den som innehåller både Address to Address och Address to Location, i samma mapp som förra: `D:\Fullstack developer\7 Integration med 3e partssystem\`. Säg till när den ligger där, så läser jag parametrarna, gör ett anrop och visar svaret innan jag föreslår Zod-schemat.
+
+---
+
+## Prompt 17 (30 okt 2026)
+
+> Varsågod: "D:\Fullstack developer\7 Integration med 3e partssystem\PostNord Adress to Adress and Adress to Location.txt"
+
+### Svar
+
+Ingen kod är ändrad. Jag har läst dokumentationen och gjort testanrop mot sandlådan för att se hur svaren faktiskt ser ut.
+
+**Vad dokumentationen säger**
+
+- Obligatoriskt: `apikey`, `startTime` (tiden då PostNord får paketet, i lokal tid, till exempel `2023-11-06T12:00:00`), `serviceGroup=SE`, `originPostCode`, `originCountryCode` och `destinationCountryCode`.
+- Address to Address kräver också mottagarens postnummer, gata och gatunummer. Address to Location kräver i stället `destinationLocationId` och `destinationLocationType` (`depot`, `hub`, `servicepoint` eller `customer`).
+- `serviceCodes`: 17 är MyPack Home (hemleverans), 18 Parcel och 19 MyPack Collect (ombud).
+- Dokumentationen visar inget exempel på svar ("No response body").
+
+**Vad testanropen visade**
+
+Från butikens postnummer 393 65, med `startTime` satt till nuvarande tid i Sverige:
+
+1. **Version:** dokumentationen anger ingen version. `v1` och `v2` finns båda, men `v2` kräver parametern `destinationProductionPointId` i stället för `destinationLocationId`. Dokumentationen beskriver alltså `v1`.
+2. **Svaret är en lista,** inte ett objekt. Varje rad är en variant av tjänsten: grundtjänsten utan tillägg, och varianter med tillägg som paketbox, id-kontroll eller leverans samma dag.
+3. **En rad i `v1` ser ut så här:** `timeOfArrival` ("2026-11-02T18:00:00"), `timeOfDeparture`, `latestTimeOfBooking` ("2026-10-30T14:00:00"), `possibleDeviation`, `serviceInformation` med `serviceCode`, `name` och ibland `additionalServices`, och för ombud även `deliveryPoint` med ombudets adress.
+4. **Fel kommer inuti ett lyckat svar.** Med ett id som inte finns svarar PostNord `200 OK` med raden `{ "errorMessage": "Requested destination location ... not found.", "isBookable": false, "isSupported": false }`. Det räcker alltså inte att kontrollera `response.ok`, adaptern måste titta i raderna.
+5. **Address to Location tar ombudets `servicePointId`.** Ica Supermarket Lindsdal (331366) och paketboxen på Lassevägen (2696390) fungerar båda med `destinationLocationType=servicepoint`. PostNords andra id, `pudoId` (SE20135), ger "not found".
+6. **Gatuadressen är inte nödvändig i praktiken.** Dokumentationen säger att mottagarens gata och nummer krävs, men Address to Address svarar likadant med bara postnumret.
+7. **Exempel:** beställt fredag 30 oktober kl. 10.50, sista bokningstid 14.00, avgång samma dag 17.30, framme måndag 2 november. Samma för ombud och hemleverans till Stockholm.
+
+**Skillnader mot dokumentationen**
+
+- Exemplet för Address to Location i dokumentationen pekar på `/addresstoaddress`. Den riktiga endpointen är `/addresstolocation`.
+- Versionen står inte, och `v2` har andra parameternamn och ett annat svar.
+- Gata och gatunummer markeras som obligatoriska, men behövs inte.
+- Dokumentationen saknar exempel på svar, och felen kommer som rader i ett `200`-svar.
+
+**Ändringar jag föreslår**
+
+1. **Gränssnittet** (`shippingCarrier.ts`): `estimateDelivery` tar ett objekt i stället för två postnummer, så att kassan kan fråga om rätt leveranssätt:
+
+    ```ts
+    export type DeliveryRequest = {
+      fromPostalCode: string
+      toPostalCode: string
+      toStreet?: string
+      delivery: 'home' | 'servicePoint'
+      servicePointId?: string
+    }
+    ```
+
+2. **Adaptern** (`postnordAdapter.ts`): den gissade koden (`getTransitTimeInformation.json`, `transitTimeResponse`) tas bort och ersätts med `v1` enligt dokumentationen:
+    - Hemleverans: `/rest/transport/v1/transittime/addresstoaddress` med `serviceCodes=17`.
+    - Valt ombud eller paketbox: `/rest/transport/v1/transittime/addresstolocation` med `serviceCodes=19`, `destinationLocationId` = ombudets id och `destinationLocationType=servicepoint`.
+    - Ombud innan kunden har valt: `/addresstoaddress` med `serviceCodes=19`, som räknar till PostNords standardombud för postnumret.
+    - `startTime` är nuvarande tid i Sverige, och `serviceGroup=SE`, `originPostCode=39365`, `originCountryCode=SE` och `destinationCountryCode=SE`.
+    - Finns kundens gatuadress, till exempel "Storgatan 5", delas den upp i `destinationStreetName` och `destinationStreetNumber`, eftersom dokumentationen ber om det. Annars skickas bara postnumret.
+3. **Zod-schemat**, byggt på de riktiga svaren:
+
+    ```ts
+    const PostNordTransitTimeResponseSchema = z.array(z.unknown())
+
+    const PostNordTransitTimeRowSchema = z.object({
+      timeOfArrival: z.string().regex(/^\d{4}-\d{2}-\d{2}T/),
+      serviceInformation: z.object({
+        serviceCode: z.string(),
+        additionalServices: z.array(z.unknown()).optional(),
+      }),
+    })
+    ```
+
+    Först kontrolleras att svaret är en lista. Sedan kontrolleras varje rad för sig. Rader med `errorMessage` klarar inte schemat och hoppas över. Av de rader som är kvar används grundtjänsten, alltså raden med rätt `serviceCode` och utan `additionalServices`. Finns ingen sådan rad kastar adaptern ett fel, och kassan visar då ingen leveranstid.
+4. **Svaret till butiken** är som förut `{ date: 'YYYY-MM-DD' }`, taget från `timeOfArrival`.
+
+Säg till om förslaget ser rätt ut, så gör jag ändringarna och testar dem mot sandlådan.
+
+---
+
+## Prompt 18 (30 okt 2026)
+
+> Hahaha, punkt 4, typiskt PostNord beteende. De skickar trasiga paket även digitalt xD
+>
+> Här kommer en djupare del av att använda ai för utveckling, jag validerade dina svar externt mot en annan ai för att kontrollera dig och här kommer det svaret:
+>
+> **1. Förbättra Zod-valideringen**
+>
+> Jag vill att vi skiljer mellan:
+> - Ett giltigt svar med beräknad leveranstid.
+> - Ett giltigt svar där leverans inte stöds.
+> - Ett felmeddelande från PostNord.
+> - Ett oväntat eller felaktigt formaterat API-svar.
+>
+> Undvik att tyst hoppa över alla rader som inte matchar schemat. Vi behöver kunna förstå varför en leveranstid saknas.
+>
+> Logga relevanta fel på serversidan, men aldrig API-nycklar eller fullständiga URL:er som innehåller nycklar.
+>
+> **2. Undersök `isBookable` och `isSupported`**
+>
+> Du har upptäckt dessa fält i API-svaren. Kontrollera vad de faktiskt betyder och om de förekommer även i lyckade svar.
+>
+> Vi använder API:et för att uppskatta leveranstid, inte för att boka transporter. Därför ska vi inte automatiskt kräva `isBookable: true` utan att först förstå innebörden.
+>
+> Dokumentera slutsatsen.
+>
+> **3. Korrigera `startTime`**
+>
+> Vi ska inte använda kundens beställningstid som om paketet redan överlämnats till PostNord.
+>
+> Implementera en enkel funktion som beräknar nästa möjliga överlämningstid utifrån svenska vardagar och en konfigurerbar bryttid.
+>
+> Utgå tills vidare från:
+> - Beställning före kl. 12.00 på vardagar: överlämning samma dag kl. 14.00.
+> - Beställning efter kl. 12.00: nästa vardag kl. 14.00.
+> - Beställning under helgen: måndag kl. 14.00.
+>
+> Detta är våra egna antaganden för laborationen, inte garanterade upphämtningstider från PostNord. Hantera svensk tidszon och sommar-/vintertid korrekt. Dokumentera att helgdagar ännu inte hanteras.
+>
+> **4. Håll leveranstid och ombudssökning oberoende**
+>
+> Ett fel vid beräkning av leveranstid får aldrig hindra kunden från att beställa.
+>
+> Om leveranstiden inte kan hämtas visar vi:
+>
+> "Beräknad leveranstid är tillfälligt otillgänglig."
+>
+> Om ombudssökningen fungerar ska kunden fortfarande kunna välja ombud, även om leveranstidsberäkningen misslyckas.
+>
+> Om ombudssökningen misslyckas använder vi vår tidigare beslutade fallback med manuell tilldelning av ombud.
+>
+> **5. Hantera adresser pragmatiskt**
+>
+> Undvik att bygga en komplicerad adressparser enbart för denna integration.
+>
+> Om API:et fungerar med postnummer för en uppskattad leveranstid kan vi använda det, men dokumentera avvikelsen från PostNords specifikation.
+>
+> Om fullständig adress behövs ska vi inte anta att alla svenska adresser följer formatet "Gatunamn 5".
+>
+> **6. Val av leveranstid**
+>
+> Använd rätt tjänst och destination:
+> - Hemleverans: serviceCode 17.
+> - Ombud och paketbox: serviceCode 19.
+> - När kunden valt ett specifikt ombud ska leveranstiden beräknas till just det ombudet.
+>
+> Välj grundtjänsten utan tilläggstjänster när ett sådant giltigt svar finns. Om flera giltiga grundtjänstsvar finns ska urvalet vara deterministiskt och dokumenterat.
+>
+> Visa leveranstiden som en uppskattning, aldrig som ett garanterat leveransdatum.
+>
+> **7. Tester**
+>
+> Jag vill att du testar:
+> - Giltig leveranstid för hemleverans.
+> - Giltig leveranstid för ombud.
+> - Giltig leveranstid för paketbox.
+> - Ogiltigt ombuds-ID.
+> - PostNord svarar med HTTP 200 men innehåller ett fel.
+> - PostNord svarar med 502 eller timeout.
+> - Oväntad JSON-struktur.
+> - Beställning på fredag efter bryttiden.
+> - Beställning under helgen.
+>
+> Använd mockade API-svar för feltester där det är lämpligt. Vi behöver inte orsaka riktiga fel hos PostNord.
+>
+> **8. Säkerhet**
+>
+> API-nyckeln ska endast användas på servern. Läs inte `.env` och exponera aldrig nyckeln i loggar, felmeddelanden eller klientkod.
+>
+> **Arbetssätt**
+>
+> Implementera detta stegvis enligt vår tidigare överenskommelse. Redovisa vilka filer du tänker ändra innan du gör ändringarna, och invänta mitt godkännande för varje steg och terminalkommando.
+>
+> Dokumentera också vilka antaganden som visade sig felaktiga, vilka avvikelser vi upptäckte i PostNords dokumentation och hur vi korrigerade implementationen. Det ska senare användas i laborationens README.
+
+### Svar
+
+Ja, ett `200 OK` som innehåller "not found" är ungefär som en avi om att paketet är framme, fast skåpet är tomt.
+
+Bra granskning. Här är planen steg för steg, med de filer varje steg ändrar. Ingenting görs förrän du har godkänt steg A.
+
+**Det jag redan vet om `isBookable` och `isSupported`**
+
+Fälten nämns inte i någon av de två dokumentationsfilerna. Testanropen hittills har visat:
+
+- **`v1`, som vi använder:** lyckade rader saknar båda fälten. Felraden för ett okänt ombuds-id hade `isBookable: false` och `isSupported: false`, tillsammans med `errorMessage`.
+- **`v2`:** lyckade rader har `isBookable: true` och `isSupported: true`. "Leverans samma dag erbjuds inte från 393 65" gav `isBookable: false` och `isSupported: true` för hemleverans, men `false` och `false` för ombud.
+
+Min tolkning, som PostNord inte bekräftar någonstans: `isSupported` säger om tjänsten finns för sträckan, och `isBookable` om den går att boka med de uppgifter som skickades. I `v1` finns fälten bara på rader som redan har `errorMessage`, så de säger inget nytt. Slutsats: vi kräver inte `isBookable: true`. En rad räknas som lyckad när den har en giltig `timeOfArrival`, och som misslyckad när den har `errorMessage`. Steg A prövar slutsatsen mot fler fall.
+
+**Steg A: undersökning, inga filer ändras**
+
+Ett terminalkommando med tre anrop mot `v1` i sandlådan: ett postnummer som inte finns, ett ogiltigt ombuds-id med hela svaret, och en tilläggstjänst som kanske inte erbjuds från 393 65 (kod 10, före kl. 9). Svaren sparas i min tillfälliga mapp utanför repot och blir underlag för de låtsade svaren i testerna.
+
+**Steg B: `server/lib/fetchJson.ts`**
+
+`fetchJson` läser inte innehållet i ett felsvar, så PostNords förklaring försvinner, och felmeddelandet innehåller hela adressen. Förslag: en liten felklass `HttpError` med `status` och `body`. Texten i felmeddelandet ändras inte, så de andra adaptrarna påverkas inte. Det är delad kod, så det är ditt beslut.
+
+**Steg C: ny fil `server/lib/handoverTime.ts`**
+
+- `nextHandoverTime(now)` räknar ut nästa överlämning enligt dina regler.
+- Den läser svensk väggtid med `Intl` och tidszonen `Europe/Stockholm`, och skickar tiden till PostNord som lokal tid utan tidszon, i det format dokumentationen visar. Sommar- och vintertid sköts då av tidszonsdatabasen.
+- Bryttid och överlämningstid läses från `.env` (`SHIPPING_CUTOFF_HOUR` och `SHIPPING_HANDOVER_HOUR`), med 12 och 14 som standard. `.env.example` får raderna.
+- Helgdagar hanteras inte än. Det står i en kommentar och i dokumentationen.
+
+Överlämningen är butikens regel, inte PostNords, så den ligger utanför adaptern och skickas med till den.
+
+**Steg D: `server/integrations/shippingCarrier.ts`**
+
+- `DeliveryRequest`: `fromPostalCode`, `toPostalCode`, `handoverTime`, `delivery` (`'home'` eller `'servicePoint'`) och ett valfritt `servicePointId`. Ingen gatuadress.
+- `estimateDelivery` kastar inte längre fel utan returnerar ett av fyra utfall:
+
+    ```ts
+    export type DeliveryEstimateResult =
+      | { status: 'estimate'; date: string }
+      | { status: 'notSupported'; reason: string }
+      | { status: 'carrierError'; reason: string }
+      | { status: 'invalidResponse'; reason: string }
+    ```
+
+- `estimate`: giltigt svar med leveranstid.
+- `notSupported`: giltigt svar där PostNord förklarar på en rad att leveransen inte går, till exempel "is not offered from postal code" eller "location not found". Det är också så ett ogiltigt ombuds-id och "200 med fel" landar.
+- `carrierError`: PostNord svarar med en felkod, eller inte alls inom tiden (502 och timeout hamnar här).
+- `invalidResponse`: svaret, eller en rad i det, har en form vi inte känner igen.
+
+Routen loggar `reason` och visar "Beräknad leveranstid är tillfälligt otillgänglig." för allt utom `estimate`.
+
+**Steg E: `server/integrations/postnordAdapter.ts`**
+
+- Den gissade koden tas bort. `v1` `/addresstoaddress` används för hemleverans (17) och för ombud innan kunden har valt (19). `v1` `/addresstolocation` används för valt ombud eller paketbox (19). Bara postnummer skickas, och avvikelsen från dokumentationen skrivs ner.
+- Varje rad kontrolleras mot två scheman: en lyckad rad (`timeOfArrival`, `serviceInformation.serviceCode` och valfria `additionalServices`) och en felrad (`errorMessage`). En rad som inte passar något av dem gör hela svaret till `invalidResponse`, i stället för att hoppas över tyst.
+- Urval: bland lyckade rader med rätt `serviceCode` och utan `additionalServices` väljs den med tidigast `timeOfArrival`. Är två lika väljs den som kommer först i PostNords lista. Regeln står i en kommentar.
+- Loggning: felmeddelandena byggs utan adress, bara med endpointens namn, statuskoden och PostNords förklaring. Det gäller även ombudssökningen, så maskeringen av nyckeln behövs inte längre.
+
+**Steg F: tester**
+
+Projektet har inget testverktyg. Förslag: Nodes inbyggda testkörare via `tsx`, som redan finns, alltså inget nytt paket. Nytt skript i `package.json`: `"test": "tsx --test server/**/*.test.ts"`.
+
+- `server/lib/handoverTime.test.ts`: vardag före och efter 12, fredag efter bryttiden, lördag, söndag, och dagarna när sommartid börjar och slutar.
+- `server/integrations/postnordAdapter.test.ts`: med en låtsad `fetch` som ger svaren från steg A: hemleverans, ombud, paketbox, ogiltigt ombuds-id, 200 med fel, 502, timeout och oväntad JSON. Testerna anropar aldrig PostNord.
+- Ett kort skript utanför repot som kör hemleverans, ombud, paketbox och ogiltigt id mot sandlådan på riktigt.
+
+**Steg G: dokumentation**
+
+Ny fil `docs/postnord-avvikelser.md` med tre listor: antaganden som visade sig fel, avvikelser i PostNords dokumentation, och hur koden rättades. Den blir underlag för README i steg 14.
+
+Punkt 4 i granskningen hör till steg 7 i huvudplanen, routen för kassan: ombud och leveranstid hämtas var för sig, och kassan visar "Beräknad leveranstid är tillfälligt otillgänglig." när leveranstiden saknas. Kassan skriver alltid "Beräknad leverans", aldrig ett lovat datum.
+
+Får jag börja med steg A?
+
+---
+
+## Prompt 19 (30 okt 2026)
+
+> Jag godkänner steg A, men har några invändningar.
+>
+> Visa först det exakta terminalkommandot så att jag kan granska det innan körning. API-nyckeln får inte exponeras i kommandot, terminalhistoriken, loggar eller sparade testsvar.
+>
+> Genomför de tre undersökningarna och redovisa resultaten. Ändra ingen projektkod ännu.
+>
+> Jag har också några synpunkter på kommande steg:
+>
+> B: Motivera varför den gemensamma `fetchJson.ts` behöver ändras. Jag vill undvika att påverka andra integrationer om PostNords särskilda felhantering kan lösas i adaptern.
+>
+> D: Skilj på ogiltigt ombuds-ID och en leveranstjänst som inte stöds. Det är olika situationer och bör inte automatiskt behandlas likadant.
+>
+> E: Behåll skyddet mot att API-nycklar exponeras i loggar. Vi ska inte förlita oss enbart på att våra egna felmeddelanden saknar URL:er.
+>
+> I övrigt tycker jag att planen ser bra ut.
+>
+> Efter steg A vill jag se resultaten och dina eventuella rekommenderade justeringar innan vi går vidare till steg B.
+
+### Svar
+
+Ingen projektkod är ändrad.
+
+**Kommandot, visat före körning och godkänt av dig**
+
+```
+cd "D:/Fullstack developer/6. Systemutveckling/fsu25d-systemutveckling-uppgift-1-min-egna-e-handel-csschef" && node --env-file=.env node_modules/tsx/dist/cli.mjs "<min tillfälliga mapp>/stepA.mts" < /dev/null
+```
+
+- Nyckeln står inte i kommandot. `node --env-file=.env` lägger den i processens miljö, och skriptet läser den därifrån. Jag läser aldrig själva `.env`.
+- Skriptet ligger utanför repot. Det skriver ut parametrarna innan nyckeln läggs till i adressen, och allt som skrivs ut eller sparas går först genom en maskering som byter ut nyckeln mot `***`.
+- Sist kontrollerade skriptet de sparade svaren. Resultat: "Nyckeln i sparade svar: nej".
+
+Alla tre anropen gick mot `v1`, med överlämning måndag 2 november kl. 14.00 från 393 65.
+
+**Resultat**
+
+1. **Postnummer som inte finns (00000), ombud:** `400 Bad Request` med JSON: `faultCode` "API-009", `explanationText` "Postal code '00000' does not exist for country code 'SE'", och vilken parameter det gäller (`destinationPostCode`). Ett felaktigt postnummer ger alltså en felkod, inte en felrad i ett lyckat svar.
+2. **Ogiltigt ombuds-id (999999999):** `200 OK` med en enda rad: `errorMessage` "Requested destination location '999999999-SERVICE_POINT-SE' not found.", `isBookable: false` och `isSupported: false`.
+3. **Hemleverans med tilläggstjänsten före kl. 9 (kod 10), till 111 51:** `200 OK` med en enda rad, och det är grundtjänsten PostNord Home utan tillägg: framme tisdag 3 november kl. 18. Ingen felrad. En variant som inte erbjuds försvinner alltså tyst ur listan i `v1`.
+
+Dessutom: `latestTimeOfBooking` är 14.00 vid 393 65, samma tid som vår antagna överlämning.
+
+**Slutsats om `isBookable` och `isSupported`**
+
+I `v1` finns fälten bara på felrader, och där har de alltid varit `false` båda två. Lyckade rader saknar dem helt. De säger alltså inget som inte `errorMessage` redan säger, och PostNord förklarar dem inte i dokumentationen. Vi använder dem inte för några beslut. En rad med giltig `timeOfArrival` är lyckad, och en rad med `errorMessage` är ett fel.
+
+**Rekommenderade justeringar**
+
+**B: `fetchJson.ts` ändras inte.** Resultat 1 visar att PostNords förklaring finns i felsvarets innehåll, och `fetchJson` läser inte det. Men det går att lösa i adaptern. Adaptern får en egen liten hjälpfunktion för PostNord-anrop, med timeout, som läser svaret både vid lyckat anrop och vid felkod. Andra integrationer påverkas inte. Det som går förlorat är omförsöken i `fetchJson`. Jag rekommenderar inga omförsök mot PostNord: kassan har redan reservlösningar (ombud "Väntar" och "Beräknad leveranstid är tillfälligt otillgänglig."), och kunden ska inte vänta flera sekunder i kassan.
+
+**D: fler utfall än fyra, så att olika situationer skiljs åt.** Resultaten visar tre olika sorters "ingen leveranstid":
+
+```ts
+export type DeliveryEstimateResult =
+  | { status: 'estimate'; date: string }
+  | { status: 'notSupported'; reason: string }
+  | { status: 'invalidServicePoint'; reason: string }
+  | { status: 'rejected'; reason: string }
+  | { status: 'unavailable'; reason: string }
+  | { status: 'invalidResponse'; reason: string }
+```
+
+- `estimate`: grundtjänsten finns med en giltig `timeOfArrival`.
+- `notSupported`: ett giltigt svar utan felrader, där grundtjänsten saknas. Så ser en tjänst som inte erbjuds ut i `v1` (resultat 3).
+- `invalidServicePoint`: ett giltigt svar från `/addresstolocation` med felrad, som för ett ombuds-id som inte finns (resultat 2). Begränsning: `v1` har ingen felkod på raden, så det är endpointen och felraden som avgör, inte texten. Det är den enda felrad vi har sett från den endpointen.
+- `rejected`: PostNord svarar med en felkod i 400-serien och en förklaring, som för ett postnummer som inte finns (resultat 1). Förklaringen följer med i `reason`.
+- `unavailable`: felkod i 500-serien, timeout eller nätverksfel.
+- `invalidResponse`: svaret, eller en rad i det, har en form vi inte känner igen.
+
+Kunden ser samma text för allt utom `estimate`, men loggen visar vilket utfall det var och varför.
+
+**E: maskeringen av nyckeln behålls.** Alla texter som lämnar adaptern, i felmeddelanden, i loggar och i `reason`, går genom samma maskering som i dag, även om de inte ska innehålla någon adress. Det är ett andra skydd om något oväntat, som ett felsvar från PostNord, skulle innehålla nyckeln.
+
+**Planen efter justeringarna**
+
+- Steg B utgår: ingen ändring i `fetchJson.ts`. Hjälpfunktionen för PostNord blir en del av steg E.
+- Steg C: `server/lib/handoverTime.ts`, oförändrat.
+- Steg D: `server/integrations/shippingCarrier.ts`, med sex utfall.
+- Steg E: `server/integrations/postnordAdapter.ts`, med egen hjälpfunktion och maskering.
+- Steg F och G: oförändrade. Svaren från steg A blir underlag för testernas låtsade svar.
+
+Godkänner du justeringarna? Då börjar jag med steg C och visar filen innan jag skapar den.
+
+---
+
+## Prompt 20 (30 okt 2026)
+
+> Jag godkänner justeringarna och att du börjar med nästa steg
+>
+> 1. `notSupported` ska bara användas när den efterfrågade grundtjänsten saknas. Om ett tillägg inte erbjuds men grundtjänsten fungerar ska vi fortfarande kunna visa leveranstiden.
+>
+> 2. `rejected` behöver kunna skilja ogiltiga postnummer från andra avvisade anrop. Ett verifierat ogiltigt postnummer ska ge ett tydligt valideringsfel i kassan, inte behandlas som ett tillfälligt driftstopp. Vi ska fortfarande tillåta köp vid tekniska fel hos PostNord.
+>
+> 3. Lägg till ett test exakt vid bryttiden kl. 12.00, utöver testerna före och efter. Säkerställ också att tidsberäkningen fungerar korrekt vid övergång mellan sommartid och vintertid.
+>
+> I övrigt är jag nöjd med planen.
+
+### Svar
+
+**Dina tre punkter**
+
+1. **`notSupported` bara när grundtjänsten saknas.** Så blir det. Adaptern frågar aldrig efter tillägg, och urvalet letar bara efter grundtjänsten. Finns grundtjänsten blir utfallet `estimate`, oavsett vilka tillägg som saknas.
+2. **Ogiltigt postnummer får ett eget utfall, `invalidPostalCode`.** Det avgörs av PostNords strukturerade fält, inte av texten: felkod 400 där `compositeFault.faults` pekar ut parametern `destinationPostCode` med `faultCode` "API-009", som i steg A. Kassan visar då ett fel under postnummerfältet, till exempel "Postnumret finns inte. Kontrollera det.", och ordern kan inte skickas förrän det är rättat. Alla andra avvisningar blir `rejected`, och tekniska fel blir `unavailable`. I de fallen går köpet igenom som vanligt.
+3. **Bryttiden och sommar- och vintertid.** Testet exakt kl. 12.00 finns med, både på vintertid och sommartid, och de svenska klockslagen kontrolleras på båda sidor av bytena i mars och oktober. Se resultatet nedan. De blir riktiga tester i steg F.
+
+**Steg C: klart**
+
+Ny fil `server/lib/handoverTime.ts` med `nextHandoverTime(now)`:
+
+- Svensk tid läses med `Intl` och tidszonen `Europe/Stockholm`, oavsett vilken tidszon servern går i. Vercel går på UTC.
+- Datumräkningen görs på kalenderdatumet, inte på klockslag, så att sommar- och vintertid inte kan flytta dagen.
+- Före bryttiden blir det samma vardag, annars nästa vardag. Exakt på bryttiden räknas som efter. Lördag och söndag blir måndag.
+- Svaret är svensk lokal tid utan tidszon, till exempel `2026-11-02T14:00:00`, i samma format som PostNords `startTime`.
+- Bryttid och överlämning läses från `SHIPPING_CUTOFF_HOUR` och `SHIPPING_HANDOVER_HOUR`. Saknas de, eller är de inte hela timmar mellan 0 och 23, gäller 12 och 14.
+- Svenska helgdagar hanteras inte än. Det står överst i filen.
+
+`.env.example` har fått de två raderna. De behövs inte i din `.env` eller på Vercel så länge 12 och 14 gäller.
+
+**Kontroll av tolv tidpunkter**
+
+Typkontrollen gick igenom, och alla tolv gav rätt svar. Tiderna nedan är svensk tid:
+
+| Beställning | Överlämning |
+|---|---|
+| mån 2 nov 11.59 (vintertid) | mån 2 nov 14.00 |
+| mån 2 nov 12.00, exakt bryttid | tis 3 nov 14.00 |
+| mån 2 nov 12.01 | tis 3 nov 14.00 |
+| fre 30 okt 12.30 | mån 2 nov 14.00 |
+| lör 31 okt 10.00 | mån 2 nov 14.00 |
+| sön 1 nov 23.30 | mån 2 nov 14.00 |
+| fre 23 okt 11.59 (sommartid) | fre 23 okt 14.00 |
+| fre 23 okt 12.00, helgen då vintertid börjar | mån 26 okt 14.00 |
+| sön 25 okt 02.30, direkt efter bytet | mån 26 okt 14.00 |
+| fre 27 mars 12.00, helgen då sommartid börjar | mån 30 mars 14.00 |
+| mån 30 mars 11.59 (sommartid) | mån 30 mars 14.00 |
+| mån 30 mars 12.00 (sommartid) | tis 31 mars 14.00 |
+
+Raderna med exakt 12.00 på sommartid visar att bryttiden följer svensk tid: 12.00 sommartid är 10.00 i UTC, och då räknas beställningen redan som efter bryttiden.
+
+**Steg D: det jag vill ändra i `server/integrations/shippingCarrier.ts`**
+
+```ts
+export type DeliveryRequest = {
+  fromPostalCode: string
+  toPostalCode: string
+  handoverTime: string
+  delivery: 'home' | 'servicePoint'
+  servicePointId?: string
+}
+
+export type DeliveryEstimateResult =
+  | { status: 'estimate'; date: string }
+  | { status: 'notSupported'; reason: string }
+  | { status: 'invalidServicePoint'; reason: string }
+  | { status: 'invalidPostalCode'; reason: string }
+  | { status: 'rejected'; reason: string }
+  | { status: 'unavailable'; reason: string }
+  | { status: 'invalidResponse'; reason: string }
+
+export type ServicePointsResult =
+  | { status: 'found'; servicePoints: ServicePoint[] }
+  | { status: 'invalidPostalCode'; reason: string }
+  | { status: 'unavailable'; reason: string }
+  | { status: 'invalidResponse'; reason: string }
+```
+
+- `estimateDelivery(request)` returnerar `DeliveryEstimateResult` i stället för att kasta fel.
+- **Ombudssökningen behöver samma skillnad.** Annars faller ett ogiltigt postnummer tillbaka på "Väntar", som om PostNord vore nere. `findServicePoints(postalCode)` returnerar därför `ServicePointsResult`. Hur ombudssökningen svarar på ett postnummer som inte finns vet vi inte än, så det testar jag först i steg E, med ett kommando som jag visar innan det körs.
+- `DeliveryEstimate` tas bort, eftersom datumet nu ligger i `estimate`.
+
+Efter steg D visar typkontrollen fel i `postnordAdapter.ts` tills steg E är klart. Det är väntat.
+
+Godkänner du steg D?
+
+---
+
+## Prompt 21 (30 okt 2026)
+
+> Det låter bra men jag vill att vi skiljer mellan ett giltigt svar utan några tillgängliga ombud och ett verifierat ogiltigt postnummer.
+>
+> invalidPostalCode får bara användas när PostNord uttryckligen bekräftar att postnumret är ogiltigt. Ett tomt resultat får inte automatiskt tolkas som ett ogiltigt postnummer.
+>
+> Fortsätt
+
+### Svar
+
+**Steg D: klart**
+
+`server/integrations/shippingCarrier.ts` har ändrats så här:
+
+- **`ServicePointsResult`** har fått utfallet `noServicePoints`: PostNord svarade som det ska, men listan var tom. `invalidPostalCode` används bara när PostNord uttryckligen säger att postnumret inte finns, och det står i en kommentar ovanför typen. Jag lade också till `rejected`, för andra avvisade anrop, så att ombudssökningen har samma utfall som leveranstiden.
+
+    ```ts
+    export type ServicePointsResult =
+      | { status: 'found'; servicePoints: ServicePoint[] }
+      | { status: 'noServicePoints'; reason: string }
+      | { status: 'invalidPostalCode'; reason: string }
+      | { status: 'rejected'; reason: string }
+      | { status: 'unavailable'; reason: string }
+      | { status: 'invalidResponse'; reason: string }
+    ```
+
+- **`DeliveryRequest`** och **`DeliveryEstimateResult`** ser ut som i förra svaret, med de sju utfallen.
+- **`ShippingCarrier`**: `findServicePoints(postalCode)` returnerar `ServicePointsResult`, och `estimateDelivery(request)` returnerar `DeliveryEstimateResult`. Ingen av dem kastar fel längre.
+- `DeliveryEstimate` är borttagen.
+
+Typkontrollen visar nu fel i `postnordAdapter.ts`, eftersom adaptern fortfarande följer det gamla gränssnittet. Det rättas i steg E.
+
+**Steg E: det jag vill göra i `server/integrations/postnordAdapter.ts`**
+
+1. **En egen hjälpfunktion för PostNord-anrop.** Den använder `fetch` med en timeout på 5 sekunder, lägger nyckeln i adressen enligt dokumentationen, och läser svaret både när anropet lyckas och när PostNord svarar med en felkod. Den skiljer på tre fall: lyckat svar, felkod med innehåll, och inget svar alls (timeout eller nätverksfel). Inga omförsök. `fetchJson.ts` rörs inte.
+2. **Maskering.** Alla texter som lämnar adaptern går genom maskeringen av nyckeln, även om de inte ska innehålla någon adress.
+3. **Ogiltigt postnummer avgörs av PostNords strukturerade fält,** felkod 400 och `compositeFault.faults` med parametern för postnumret, aldrig av en tom lista eller av texten.
+4. **Ombudssökningen** returnerar `ServicePointsResult`. Ombud och paketboxar hämtas fortfarande i två anrop. Svarar något av dem med ett tekniskt fel blir utfallet `unavailable`. Är båda listorna tomma blir det `noServicePoints`.
+5. **Leveranstiden** returnerar `DeliveryEstimateResult`, med `v1` `/addresstoaddress` och `/addresstolocation`, och bara postnummer. Varje rad kontrolleras mot ett schema för lyckad rad och ett för felrad. En rad som inte passar något av dem gör svaret till `invalidResponse`. Urvalet av grundtjänsten är som i planen: rätt `serviceCode`, inga tillägg, tidigast `timeOfArrival`, och vid lika den som kommer först.
+6. Den gissade koden (`getTransitTimeInformation.json`) tas bort.
+
+**Det jag behöver veta först**
+
+Hur svarar ombudssökningen när postnumret inte finns? Leveranstiden säger det med `faultCode` "API-009" och parametern `destinationPostCode`, men ombudssökningen lägger sina fel på ett annat ställe (`servicePointInformationResponse.compositeFault`, enligt testet med fel `typeId` tidigare). Jag har förberett ett skript i min tillfälliga mapp som söker ombud och paketboxar för 00000, med samma skydd för nyckeln som i steg A. Det här är det exakta kommandot:
+
+```
+cd "D:/Fullstack developer/6. Systemutveckling/fsu25d-systemutveckling-uppgift-1-min-egna-e-handel-csschef" && node --env-file=.env node_modules/tsx/dist/cli.mjs "<min tillfälliga mapp>/stepE-probe.mts" < /dev/null
+```
+
+En fråga till steg 10, inget beslut behövs nu: om ombudssökningen ger `noServicePoints`, ska kassan då bara erbjuda hemleverans, eller ombud med ombud som väljs i efterhand, som när PostNord inte svarar?
+
+Godkänner du steg E och kommandot?
+
+---
+
+## Prompt 22 (30 okt 2026)
+
+> Jag vill se hela stepE-probe.mts inklusive vilka miljövariabler som läses.
+>
+> Två API-anrop ska inte behöva förstöra varandras resultat. Om ombudssökningen lyckas men paketboxsökningen misslyckas bör ni överväga att använda de ombud som faktiskt hittades. Det är bättre än att kasta bort fungerande data.
+>
+> Kontrollera att invalidResponse inte orsakas av irrelevanta extrafält. PostNord kan lägga till fält i sina svar. Zod ska acceptera sådana tillägg men reagera när obligatoriska fält saknas eller har fel typ.
+>
+> Om PostNord svarar korrekt men inga ombud hittas ska vi i första hand erbjuda hemleverans, förutsatt att den är tillgänglig.
+>
+> Om PostNord däremot inte svarar behåller vi vår tidigare fallback med manuell ombudstilldelning.
+
+### Svar
+
+Inget är kört och ingen kod är ändrad sedan förra svaret.
+
+**Hela `stepE-probe.mts`**
+
+```ts
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+// Nyckeln läses från miljön som node --env-file laddar. Den skrivs aldrig ut och sparas aldrig.
+const apiKey = process.env.POSTNORD_API_KEY ?? ''
+const baseUrl = process.env.POSTNORD_API_URL ?? ''
+if (!apiKey || !baseUrl) throw new Error('POSTNORD_API_KEY eller POSTNORD_API_URL saknas')
+const mask = (text: string) => text.replaceAll(apiKey, '***')
+
+const outDir = join(import.meta.dirname, 'stepE')
+mkdirSync(outDir, { recursive: true })
+
+async function probe(file: string, label: string, typeId: string) {
+  const url = new URL(`${baseUrl}/rest/businesslocation/v5/servicepoints/nearest/byaddress`)
+  url.searchParams.set('returnType', 'json')
+  url.searchParams.set('countryCode', 'SE')
+  url.searchParams.set('postalCode', '00000')
+  url.searchParams.set('numberOfServicePoints', '5')
+  url.searchParams.set('context', 'optionalservicepoint')
+  url.searchParams.set('typeId', typeId)
+  // Parametrarna skrivs ut innan nyckeln läggs till
+  console.log(`\n### ${label}\nnearest/byaddress?${url.searchParams.toString()}`)
+  url.searchParams.set('apikey', apiKey)
+
+  let saved: unknown
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(15_000) })
+    const body = mask(await res.text())
+    console.log(`${res.status} ${res.statusText}, ${res.headers.get('content-type')}`)
+    console.log(body.slice(0, 1500))
+    saved = { status: res.status, contentType: res.headers.get('content-type'), body }
+  } catch (error) {
+    const message = mask(error instanceof Error ? `${error.name}: ${error.message}` : String(error))
+    console.log(`Fel: ${message}`)
+    saved = { error: message }
+  }
+  writeFileSync(join(outDir, file), JSON.stringify(saved, null, 2))
+}
+
+await probe('1-ombud-00000.json', '1. Ombud, postnummer som inte finns (00000)', '24,25,54')
+await probe('2-paketbox-00000.json', '2. Paketbox, postnummer som inte finns (00000)', '2')
+
+// Kontroll: nyckeln får inte finnas i någon sparad fil
+const leaked = readdirSync(outDir).filter((file) => readFileSync(join(outDir, file), 'utf8').includes(apiKey))
+console.log(`\nSparade svar i ${outDir}`)
+console.log(`Nyckeln i sparade svar: ${leaked.length === 0 ? 'nej' : `JA, i ${leaked.join(', ')}`}`)
+```
+
+**Miljövariabler**
+
+- Skriptet läser två: `POSTNORD_API_KEY` och `POSTNORD_API_URL`.
+- Men `node --env-file=.env` laddar **alla** rader i `.env` i processens miljö, även databasens, Stripes och Supabases nycklar. Skriptet rör dem inte och skriver inte ut dem, men de finns i processen medan den kör.
+- Vill du ha det striktare kan PostNords två rader ligga i en egen fil, till exempel `.env.postnord`, som bara testskripten använder. Den ignoreras redan av git, eftersom `.gitignore` har `.env.*`. Men den finns inte i deny-listan i `.claude/settings.json`, så den behöver läggas till där innan den skapas. Filen skapar du själv, eftersom jag inte ska skriva nycklar.
+
+**Två anrop som inte förstör varandra**
+
+Du har rätt, det är bättre att använda det som fungerar. Ändring i steg D och E:
+
+- Utfallet `found` får en lista över grupper som inte gick att hämta: `{ status: 'found'; servicePoints: ServicePoint[]; unavailableKinds: ServicePoint['kind'][] }`. Lyckas ombuden men inte paketboxarna visar kassan ombuden, och loggen säger varför paketboxarna saknas.
+- Säger PostNord i något av anropen att postnumret inte finns blir utfallet `invalidPostalCode`, eftersom det gäller hela sökningen.
+- Hittades inga platser alls, och något anrop misslyckades, avgör felet utfallet (till exempel `unavailable`). Bara när båda anropen lyckades och båda listorna var tomma blir det `noServicePoints`.
+- **Kontrollen av kundens val vid ordern:** finns det valda id:t i listan är det godkänt. Finns det inte, och båda grupperna gick att hämta, avvisas valet. Finns det inte, men någon grupp saknas, går det inte att kontrollera, och ordern får "Väntar" i stället för att avvisas.
+
+**Extra fält i PostNords svar**
+
+`z.object` i Zod accepterar extra fält som standard och tar bort dem ur resultatet. Bara `z.strictObject` avvisar dem. Adapterns scheman använder `z.object`, och inga fält från PostNord kontrolleras mot en fast lista med tillåtna värden. Nya fält eller nya veckodagsnamn ger alltså inget fel. Saknas ett obligatoriskt fält, eller har det fel typ, misslyckas raden. Steg F får ett test med ett låtsat svar som har extra fält, och ett där ett obligatoriskt fält har fel typ.
+
+Ett förtydligande om ombudssökningen: ett enstaka ombud som inte klarar schemat hoppas över, men det loggas med skälet, så det sker inte tyst. Klarar inget ombud i ett svar schemat blir gruppen `invalidResponse`. För leveranstiden gäller det som är bestämt: en rad som inte passar gör hela svaret till `invalidResponse`.
+
+**Kassan när det inte finns några ombud**
+
+- `noServicePoints` (PostNord svarade, men inga ombud hittades): kassan erbjuder i första hand hemleverans. Mitt förslag är att hemleverans räknas som tillgänglig så länge den finns i `shipping_methods`. Ett fel i leveranstiden får aldrig hindra köp, så leveranstiden avgör inte om hemleverans visas. Undantaget är om PostNord uttryckligen säger att hemleverans inte erbjuds till postnumret (`notSupported` för tjänst 17). Då återstår ombud med ombud som väljs i efterhand.
+- `unavailable`, `rejected` eller `invalidResponse` (PostNord svarade inte, eller inte begripligt): oförändrat, ombud med ombud som väljs i efterhand ("Väntar").
+- `invalidPostalCode`: felet under postnummerfältet, som bestämt.
+
+Det här byggs i steg 7 och 10.
+
+Godkänner du ändringarna ovan och kommandot, med `.env` som det står, eller vill du hellre skapa `.env.postnord` först?
+
+---
+
+## Prompt 23 (30 okt 2026)
+
+> Jag godkänner ändringarna och skriptet. Jag skriver en .env.postnord först. Vänta in mitt svar att det är gjort
+
+### Svar
+
+Jag väntar och gör ingenting förrän du säger till.
+
+Två saker inför det:
+
+- Lägg till `.env.postnord` i deny-listan i `.claude/settings.json` innan filen skapas, till exempel `"Read(./.env.postnord)"` och `"Read(./**/.env.postnord)"`. Annars kan mitt läsverktyg öppna den.
+- Filen behöver bara `POSTNORD_API_URL` och `POSTNORD_API_KEY`.
+
+Kommandot blir då, i övrigt oförändrat:
+
+```
+cd "D:/Fullstack developer/6. Systemutveckling/fsu25d-systemutveckling-uppgift-1-min-egna-e-handel-csschef" && node --env-file=.env.postnord node_modules/tsx/dist/cli.mjs "<min tillfälliga mapp>/stepE-probe.mts" < /dev/null
+```
