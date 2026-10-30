@@ -27,7 +27,8 @@ export type ServicePoint = {
 
 // invalidPostalCode bara när bolaget uttryckligen säger att postnumret inte finns, aldrig för en tom lista
 export type ServicePointsResult =
-  | { status: 'found'; servicePoints: ServicePoint[] }
+  // unavailableKinds är grupper som inte gick att hämta, de som hittades visas ändå
+  | { status: 'found'; servicePoints: ServicePoint[]; unavailableKinds: ServicePoint['kind'][] }
   | { status: 'noServicePoints'; reason: string }
   | { status: 'invalidPostalCode'; reason: string }
   | { status: 'rejected'; reason: string }
@@ -54,7 +55,7 @@ export type DeliveryEstimateResult =
   | { status: 'unavailable'; reason: string }
   | { status: 'invalidResponse'; reason: string }
 
-// Funktionerna kastar inga fel, varje utfall kommer tillbaka med status och skäl
+// Funktionerna kastar inga fel, varje utfall har status och skäl. Skälet är för serverns logg, aldrig för kunden.
 export type ShippingCarrier = {
   name: string
   findServicePoints: (postalCode: string) => Promise<ServicePointsResult>

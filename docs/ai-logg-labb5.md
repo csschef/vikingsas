@@ -1210,3 +1210,243 @@ Kommandot blir då, i övrigt oförändrat:
 ```
 cd "D:/Fullstack developer/6. Systemutveckling/fsu25d-systemutveckling-uppgift-1-min-egna-e-handel-csschef" && node --env-file=.env.postnord node_modules/tsx/dist/cli.mjs "<min tillfälliga mapp>/stepE-probe.mts" < /dev/null
 ```
+
+---
+
+## Prompt 24 (30 okt 2026)
+
+> Klart.
+
+### Svar
+
+Jag kontrollerade först i `.claude/settings.json` att `.env.postnord` finns i deny-listan, utan att röra själva filen. Båda raderna fanns där. Sedan körde jag kommandot med `--env-file=.env.postnord`, så att bara PostNords två variabler laddades i processen.
+
+**Resultat: ombudssökningen med postnummer 00000**
+
+Både ombud (`typeId=24,25,54`) och paketboxar (`typeId=2`) svarade likadant:
+
+```
+400 Bad Request
+{"servicePointInformationResponse":{"compositeFault":{"faults":[{"faultCode":"API-400","explanationText":"Postalcode not found"}]}}}
+```
+
+Nyckeln fanns inte i de sparade svaren.
+
+**Vad det betyder**
+
+- Felet ligger under `servicePointInformationResponse.compositeFault`, inte direkt i `compositeFault` som hos leveranstiden.
+- Leveranstiden pekar ut parametern (`paramValues` med `destinationPostCode`) och har en egen felkod (API-009). Ombudssökningen har bara en allmän felkod, "API-400", som betyder 400, och ingen uppgift om parametern. Det enda som säger att det gäller postnumret är texten "Postalcode not found".
+- PostNord bekräftar alltså uttryckligen att postnumret inte finns, men i ombudssökningen bara i text.
+
+**Rekommendation**
+
+- **Leveranstiden:** `invalidPostalCode` när svaret är 400 och ett fel pekar ut parametern `destinationPostCode`. Helt strukturerat.
+- **Ombudssökningen:** `invalidPostalCode` när svaret är 400, felkoden är "API-400" och texten är exakt "Postalcode not found", utan hänsyn till stora och små bokstäver. Det är en jämförelse med text, och det står som en begränsning i dokumentationen.
+- Varför det är godtagbart: om PostNord ändrar texten blir utfallet `rejected` i stället. Det faller alltså åt det säkra hållet, kunden kan fortfarande köpa och ombud väljs i efterhand. Jämförelsen kan bara slå till när PostNord själv skriver att postnumret inte finns.
+- Ett tomt svar blir aldrig `invalidPostalCode`, som du bestämde.
+
+**Steg D, tillägget du godkände**
+
+`ServicePointsResult` har fått `unavailableKinds` på utfallet `found`:
+
+```ts
+| { status: 'found'; servicePoints: ServicePoint[]; unavailableKinds: ServicePoint['kind'][] }
+```
+
+Ska jag skriva steg E med den här rekommendationen?
+
+---
+
+## Prompt 25 (30 okt 2026)
+
+> Jag godkänner steg E och din rekommendation för identifiering av ogiltiga postnummer.
+>
+> Använd den verifierade kombinationen HTTP 400, `API-400` och feltexten `Postalcode not found` för ombudssökningen. Jämför texten skiftlägesokänsligt och använd `trim()`.
+>
+> Dokumentera att detta är en begränsning i PostNords API och att identifieringen bygger på feltext eftersom strukturerad parameterinformation saknas.
+>
+> Jag vill dock förtydliga hanteringen av `rejected`.
+>
+> Ett okänt HTTP 400-fel ska inte automatiskt behandlas som ett tillfälligt driftstopp. Det kan indikera felaktiga indata eller en bugg i integrationen.
+>
+> Behåll `rejected` som ett separat utfall och se till att kassan inte automatiskt betraktar adressen som verifierad när PostNord har avvisat begäran.
+>
+> Tekniska fel som timeout och HTTP 5xx ska däremot fortfarande använda vår tidigare fallback.
+>
+> I övrigt:
+> - Behåll fungerande ombud vid partiella fel.
+> - Undvik dubbletter i `unavailableKinds`.
+> - Behåll maskering av API-nyckeln.
+> - Exponera inte råa felmeddelanden från PostNord för klienten.
+> - Lägg till tester för felklassificeringen i steg F.
+>
+> Genomför steg E och redovisa ändringarna samt resultatet av typkontrollen innan vi går vidare.
+
+### Svar
+
+**Steg E: klart**
+
+`server/integrations/postnordAdapter.ts` är omskriven. `server/lib/fetchJson.ts` är inte ändrad.
+
+**1. Egen hjälpfunktion för PostNord, `requestPostNord`**
+
+- Använder `fetch` med timeout på 5 sekunder och inga omförsök.
+- Lägger nyckeln i adressen, som dokumentationen säger, men adressen skrivs aldrig i något meddelande.
+- Läser svaret både vid lyckat anrop och vid felkod, och ger ett av tre svar: lyckat, felkod med innehåll, eller inget svar (timeout, nätverksfel eller saknade miljövariabler).
+- Ett svar som inte är JSON blir `null`, och schemat säger då att formatet är oväntat.
+
+**2. Klassificering av felkoder, `httpFailure`**
+
+- `invalidPostalCode` när PostNord uttryckligen säger att postnumret inte finns, se punkt 3.
+- `unavailable` vid 5xx, 408 (timeout hos PostNord) och 429 (för många anrop). Det är tillfälliga fel, och den tidigare reservlösningen gäller.
+- `rejected` vid alla andra 4xx. En kommentar i koden säger att det kan vara fel indata eller en bugg i integrationen, inte ett driftstopp.
+
+**3. Ogiltigt postnummer**
+
+- **Ombudssökningen:** felkod 400, `faultCode` "API-400" och `explanationText` som efter `trim()` och små bokstäver är exakt "postalcode not found". En kommentar i koden säger att ombudssökningen inte pekar ut parametern, och att bara texten visar att det gäller postnumret.
+- **Leveranstiden:** felkod 400, `faultCode` "API-009" och `paramValues` med `destinationPostCode`. Helt strukturerat.
+- Ett tomt svar blir aldrig `invalidPostalCode`.
+- Felsvaren ligger på olika ställen i de två API:erna, så det finns ett schema för var: `compositeFault` direkt för leveranstiden, och `servicePointInformationResponse.compositeFault` för ombuden.
+
+**4. Ombudssökningen, `findServicePoints`**
+
+- Ombud och paketboxar hämtas samtidigt med `Promise.all`, i två anrop.
+- Ett fel i den ena gruppen tar inte bort platserna från den andra. Finns det platser blir utfallet `found`, och grupper som saknas står i `unavailableKinds`. Skälen loggas på servern, eftersom kassan bara får veta vilka grupper som saknas.
+- `unavailableKinds` byggs med en `Set`, så samma grupp kan inte stå två gånger.
+- Säger PostNord i något av anropen att postnumret inte finns blir utfallet `invalidPostalCode` för hela sökningen.
+- Lyckades båda anropen men listorna var tomma blir det `noServicePoints`. Fanns inga platser och något anrop misslyckades, avgör felet utfallet. Ombudens fel går före paketboxarnas, och alla skäl följer med.
+- En enskild plats som inte klarar schemat hoppas över och loggas med skälet. Klarar ingen plats i ett svar schemat blir gruppen `invalidResponse`.
+
+**5. Leveranstiden, `estimateDelivery`**
+
+- Tjänstekod 17 för hemleverans och 19 för ombud och paketbox.
+- Med ett valt ombud går anropet till `v1` `/addresstolocation` med ombudets id. Annars går det till `v1` `/addresstoaddress` med bara postnumret. En kommentar säger att dokumentationen kräver gata och nummer, men att API:t svarar likadant utan.
+- `startTime` kommer från `nextHandoverTime` via `handoverTime` i anropet.
+- Varje rad kontrolleras mot schemat för lyckad rad och schemat för felrad. En rad som inte passar något av dem gör svaret till `invalidResponse`.
+- Bara grundtjänsten räknas: rätt `serviceCode` och inga tillägg. Finns grundtjänsten blir det `estimate`, oavsett vilka tillägg som saknas. Av flera grundtjänstrader väljs den med tidigast `timeOfArrival`. Är två lika ger de samma datum.
+- Inga grundtjänstrader: felrader från `/addresstolocation` ger `invalidServicePoint`, felrader från `/addresstoaddress` ger `notSupported` med PostNords förklaring, och inga rader alls ger `notSupported`.
+
+**6. Skydd för nyckeln och för kunden**
+
+- Alla skäl som lämnar adaptern, och alla varningar den loggar, går genom `mask()`, som byter ut nyckeln mot `***`. Det gäller även texter som inte ska innehålla någon adress.
+- `shippingCarrier.ts` har fått en kommentar om att skälet är för serverns logg och aldrig visas för kunden. Routen i steg 7 översätter utfallen till kassans egna texter, så att PostNords råa felmeddelanden aldrig når webbläsaren.
+
+**7. Zod och extra fält**
+
+Alla scheman använder `z.object`, som accepterar extra fält. Inga fält från PostNord jämförs med en fast lista av tillåtna värden. Steg F testar både extra fält och obligatoriska fält med fel typ.
+
+**Typkontroll**
+
+`npx tsc -p tsconfig.api.json --noEmit` gav inga fel. En sökning efter långa streck och pilar i `server/` gav inga träffar.
+
+**Inte gjort än**
+
+Adaptern har inte körts mot sandlådan sedan omskrivningen. Det görs i steg F, tillsammans med testerna för felklassificeringen.
+
+**Att bestämma i steg 7, om `rejected`**
+
+Mitt förslag, så att adressen inte räknas som verifierad: vid `rejected` går köpet igenom, men ordern får ombudsstatus "Väntar" och felet loggas som ett integrationsfel, inte som att PostNord är nere. Vid hemleverans markeras ingenting, eftersom adressen inte kontrolleras mot PostNord då. Det tar vi ställning till när routen byggs.
+
+Godkänner du steg F?
+
+---
+
+## Prompt 26 (30 okt 2026)
+
+> Jag körde hela postnordAdapter mot en annan ai agent för att verifiera det du skrivit och följande är svaret:
+>
+> Jag godkänner steg F.
+>
+> Typkontrollen är godkänd, och vi går nu vidare med testerna.
+>
+> Jag vill att du inkluderar tester för de tre punkter som fortfarande finns i kodversionen:
+>
+> 1. Timeout eller avbruten anslutning under `response.json()` ska ge `unavailable`, inte `invalidResponse`.
+> 2. Ogiltiga kalenderdatum och felaktiga tidssträngar ska inte kunna bli leveransprognoser.
+> 3. Ett fel från `addresstolocation` ska bara klassificeras som `invalidServicePoint` när det uttryckligen gäller ett ogiltigt ombuds-ID. Andra fel ska inte automatiskt få den klassificeringen.
+>
+> Korrigera implementationen där testerna visar att det behövs.
+>
+> Jag godkänner också principen för `rejected` i steg 7: kunden ska kunna fortsätta med manuell ombudstilldelning, förutsatt att kunden tydligt informeras om att leveransalternativet inte har kunnat verifieras. Det ska loggas som ett integrationsfel och inte som ett vanligt driftstopp.
+>
+> För steg F vill jag att du:
+>
+> - Använder mockad `fetch` för att testa både lyckade svar och fel.
+> - Testar partiella resultat, ogiltiga postnummer, timeout, 4xx, 5xx och oväntade svar.
+> - Testar att API-nyckeln inte förekommer i loggar eller felmeddelanden.
+> - Kör typkontrollen och redovisar testresultaten.
+> - Inte ändrar kassans routes, Stripe eller databasen ännu.
+>
+> Visa testresultaten och eventuella kvarstående problem innan vi går vidare till steg 7.
+
+### Svar
+
+Kassans routes, Stripe och databasen är inte ändrade.
+
+**Hur jag gick till väga**
+
+Jag skrev testerna först och körde dem mot koden som den var. Då syns det om de tre punkterna verkligen var fel, innan något rättas. Alla kommandon visades innan de kördes. Testerna läser ingen `.env` och använder en påhittad nyckel.
+
+**Nya filer och ändringar**
+
+- `server/lib/handoverTime.test.ts`: 14 tester för överlämningstiden.
+- `server/integrations/postnordAdapter.test.ts`: 42 tester för adaptern, med en låtsad `fetch` via `mock.method` i Nodes inbyggda testkörare. Svaren är förenklade kopior av riktiga svar från sandlådan.
+- `package.json`: skriptet `"test": "tsx --test \"server/**/*.test.ts\""`. Inget nytt paket.
+
+**Första körningen: 9 av 56 tester fallerade, precis de tre punkterna**
+
+1. Avbruten anslutning medan svaret lästes gav `invalidResponse` (2 tester). Orsak: `response.json().catch(() => null)` skilde inte på en bruten anslutning och ett svar som inte är JSON.
+2. Ogiltiga tider blev leveranstider (6 tester), till exempel "2026-02-30T18:00:00" och "2026-11-02T25:00:00". Orsak: mönstret kontrollerade bara början av texten.
+3. Ett annat fel från `addresstolocation` blev `invalidServicePoint` (1 test). Orsak: alla felrader från den endpointen räknades som ogiltigt ombud.
+
+**Rättningar i `postnordAdapter.ts`**
+
+1. Svaret läses som text inuti samma `try` som anropet, så att timeouten gäller också medan svaret läses. Bryts läsningen blir det "inget svar", alltså `unavailable`. Först därefter tolkas texten som JSON, och misslyckas det blir det `invalidResponse`.
+2. `timeOfArrival` måste ha formen `2026-11-03T18:00:00`, och datumet måste finnas. Kontrollen räknar fram datumet med `Date.UTC` och jämför med texten. 30 februari blir 2 mars och stämmer då inte.
+3. `invalidServicePoint` ges bara när en felrad uttryckligen säger att just det valda ombudets id inte finns: texten "Requested destination location '...' not found" där platsen börjar med ombudets id. Andra felrader ger `notSupported`. Det är en jämförelse med text, eftersom `v1` saknar felkoder på raderna. Ändras texten blir det `notSupported`, kunden kan fortfarande köpa, och ombudets id kontrolleras ändå mot ombudssökningen när ordern skapas.
+
+**Andra körningen: 2 tester fallerade, och felet var mitt**
+
+För "2026-11-02Tkväll" och "2026-11-02T18:00" blev datumet ogiltigt, och då kastade `toISOString()` ett `RangeError` i stället för att returnera `false`. Zod kör en `refine` även när mönstret före den redan har sagt nej, så felet kastades ut ur `safeParse`. Rättning: kontrollen kräver själv rätt form innan den räknar, och mönstret före den är borttaget.
+
+**Tredje körningen: 56 av 56 godkända, och typkontrollen utan fel**
+
+Testerna täcker:
+
+- Ombudssökning: lyckat svar i butikens format, extra fält, partiellt resultat (paketboxar 503 och ombud med timeout), ogiltigt postnummer (även med versaler och mellanslag), annat 400-fel, 403, 502, två tomma listor, fel form, fält med fel typ, avbruten läsning.
+- Leveranstid: hemleverans (17), ombud utan valt ombud (19), valt ombud och vald paketbox (`addresstolocation`), saknat tillägg med fungerande grundtjänst, bara varianter, flera grundtjänstrader, extra fält, ogiltigt ombuds-id, annat fel från `addresstolocation`, felrad från `addresstoaddress`, ogiltigt postnummer, annat 400-fel, 502 och 429, timeout, avbruten läsning, svar som inte är JSON, fel form, fält med fel typ, sex ogiltiga tider, saknade miljövariabler.
+- Nyckeln: finns aldrig i skäl eller loggar, inte ens när ett låtsat felsvar från PostNord innehåller den. Där syns `***` i stället.
+- Överlämningstiden: före, exakt på och efter bryttiden, fredag, lördag, söndag, båda bytena mellan sommar- och vintertid, årsskiftet, och värden från miljön.
+
+**Kontroll mot sandlådan**
+
+Testerna använder bara låtsade svar, så jag körde också den omskrivna adaptern mot sandlådan, med ett skript utanför repot och bara `.env.postnord` laddad. Överlämningen blev fredag 30 oktober kl. 14.00, eftersom körningen gjordes före kl. 12.
+
+| Anrop | Utfall | Detalj |
+|---|---|---|
+| Ombudssökning 393 65 | `found` | 5 ombud, 5 paketboxar, inget saknas |
+| Ombudssökning 00000 | `invalidPostalCode` | API-400 Postalcode not found |
+| Hemleverans till 111 51 | `estimate` | 2026-11-02 |
+| Ombud till 111 51, inget valt | `estimate` | 2026-11-02 |
+| Ombud Ica Lindsdal (331366) | `estimate` | 2026-11-02 |
+| Paketbox Lassevägen (2696390) | `estimate` | 2026-11-02 |
+| Ogiltigt ombuds-id (999999999) | `invalidServicePoint` | location not found |
+| Hemleverans till 00000 | `invalidPostalCode` | API-009 Postal code '00000' does not exist |
+
+**Kvarstående problem och begränsningar**
+
+- Svenska helgdagar hanteras inte i överlämningstiden. Nyårsdagen räknas till exempel som vardag, och ett test visar det.
+- Två klassificeringar bygger på PostNords feltext, eftersom strukturerad information saknas: ogiltigt postnummer i ombudssökningen och ogiltigt ombuds-id i leveranstiden. Båda faller åt det säkra hållet om texten ändras.
+- Tidsformatet är strikt. Skulle PostNord börja skicka tidszon eller millisekunder blir det `invalidResponse`, och kassan visar då ingen leveranstid tills adaptern har anpassats.
+- Testerna körs lokalt med `npm test`. Vercel kör dem inte, eftersom Vercel bara kör `vite build`.
+- Steg G, dokumentet med avvikelser och felaktiga antaganden, är inte skrivet än.
+
+**Principen för `rejected` i steg 7, som du godkände**
+
+Kunden kan fortsätta med ombud som väljs i efterhand, men kassan säger tydligt att leveransalternativet inte kunde kontrolleras. Felet loggas som ett integrationsfel, inte som ett driftstopp.
+
+**Läge för commit**
+
+Ändrade eller nya filer sedan labben började, inget är committat: `server/integrations/shippingCarrier.ts`, `server/integrations/postnordAdapter.ts`, `server/integrations/postnordAdapter.test.ts`, `server/lib/handoverTime.ts`, `server/lib/handoverTime.test.ts`, `package.json`, `.env.example` och `docs/ai-logg-labb5.md`.
+
+Nästa steg är G, dokumentet `docs/postnord-avvikelser.md`, och sedan steg 6 och 7 i huvudplanen. Godkänner du steg G?
