@@ -2246,3 +2246,102 @@ Ingen kod är ändrad.
 Frågan om att låsa Vite till port 5174 står kvar, om du vill ha det.
 
 Godkänner du steg 12?
+
+---
+
+## Prompt 43 (30 okt 2026)
+
+> Jag godkänner steg 12, och du ska inte låsa vite till 5174, jag får komma ihåg det till nästa gång.
+
+### Svar
+
+**Beslutat:** Vite låses inte. `vite.config.ts` är oförändrad.
+
+**Steg 12: klart**
+
+**Servern**
+
+- **`server/lib/shippingPrice.ts`:** Zod-schemat `ShippingMethodUpdate` för det admin får ändra. Namnet trimmas och måste vara 1 till 50 tecken. Priset ska vara 0 kr eller mer, högst 10 000 kr och ha högst två decimaler. Gränsen för fri frakt ska vara större än 0 och ha högst två decimaler, eller vara `null`, vilket betyder ingen fri frakt. Koden ingår inte, och extra fält tas bort av Zod.
+- **`server/routes/adminShipping.ts` (ny):** `GET /api/admin/shipping` listar fraktsätten, och `PUT /api/admin/shipping/:code` sparar namn, pris och gräns. En okänd kod ger 404. Ogiltiga värden ger 400 med ett fel per fält, så att formuläret kan visa felet under rätt fält.
+- **`server/app.ts`:** routen är monterad på `/api/admin/shipping` bakom `requireAuth`, som de andra adminroutes.
+
+**Sidan i admin**
+
+- **`src/pages/AdminShippingPage.tsx` (ny)** på `/admin/frakt`, med länken "Frakt" i adminmenyn (`src/components/AdminLayout.tsx`) och en route i `src/App.tsx`.
+- Ett kort per fraktsätt, "Ombud och paketbox" och "Hemleverans", med fälten "Namn som kunden ser", "Pris (kr)" och "Fri frakt från (kr)", och en egen knapp "Spara".
+- Beloppen kan skrivas med komma eller punkt, "49,90" eller "49.90". Ett tomt fält för fri frakt betyder ingen fri frakt.
+- Egen validering med samma regler som servern, och felen under fälten. Inga bubblor från webbläsaren (`noValidate`). Servern kontrollerar ändå igen, och dess fel visas på samma sätt.
+- "Sparat" visas efter lyckad sparning, på en rad som alltid finns, så att formuläret inte hoppar.
+- Överst står: "Ändringar gäller nya ordrar. Gamla ordrar behåller fraktpriset de fick. Lämna fri frakt tomt om fraktsättet aldrig ska vara gratis."
+- Formulären återanvänder stilarna från produktformuläret (`.admin-product-form`). Det nya i `src/index.css` använder bara designvariablerna.
+
+**Tester**
+
+`server/lib/shippingPrice.test.ts`: 8 nya tester för schemat. Giltiga värden med trimmat namn, tom gräns, pris 0, negativt pris, fler än två decimaler, decimaler som 49,90, gräns 0, tomt namn, text i stället för tal, saknad gräns, och att koden inte kan ändras.
+
+**Resultat:** typkontrollen utan fel för frontend och server, 111 av 111 tester godkända, och lint med bara de två gamla varningarna. Inga långa streck eller pilar i koden.
+
+**Prova i webbläsaren**
+
+1. Logga in i admin och öppna "Frakt". Ombud ska stå på 69 kr med fri frakt från 399 kr, och hemleverans på 139 kr med fri frakt från 499 kr.
+2. Ändra priset för ombud till 59 och spara. "Sparat" ska visas.
+3. Öppna kassan med en varukorg under gränsen och skriv ett postnummer: ombud ska kosta 59 kr. En gammal order ska fortfarande visa sitt gamla fraktpris i admin.
+4. Prova ett negativt pris och "abc": felen ska visas under fältet utan att något sparas.
+5. Töm fältet för fri frakt och spara. Kassan ska då aldrig visa fri frakt för det fraktsättet, och raden "Handla för ... till för fri frakt" ska försvinna.
+6. Sätt tillbaka 69 kr och 399 kr.
+
+**Läge för commit**
+
+Steg 12 lägger till `server/routes/adminShipping.ts`, `src/pages/AdminShippingPage.tsx`, och ändringar i `server/app.ts`, `server/lib/shippingPrice.ts`, `shippingPrice.test.ts`, `src/App.tsx`, `src/components/AdminLayout.tsx` och `src/index.css`, utöver filerna från steg 7 till 11.
+
+Kvar i huvudplanen: steg 13, produktion (nycklarna på Vercel, deploy och "Klart när"), och steg 14, README.
+
+---
+
+## Prompt 44 (30 okt 2026)
+
+> Det funkar, postnords nycklar ligger redan i vercel. Jag gjorde det innan.
+
+### Svar
+
+Bra. Då är adminsidan för fraktpriser provad.
+
+**Läget inför produktion**
+
+- **Nycklar:** `POSTNORD_API_URL` och `POSTNORD_API_KEY` finns på Vercel. `SHOP_POSTAL_CODE`, `SHIPPING_CUTOFF_HOUR` och `SHIPPING_HANDOVER_HOUR` behövs inte där, eftersom koden har 39365, 12 och 14 som standardvärden.
+- **Databasen:** den delas mellan lokalt och produktion, så `shipping_methods` och de nya kolumnerna på `orders` finns redan.
+- **Git:** `.env`, `.env.postnord` och `dist` ignoreras, så inga nycklar följer med.
+
+**Förslag för steg 13**
+
+1. **Bygget lokalt.** Jag kör `npm run build`, som är `tsc -b` och `vite build`. Vercel kör bara `vite build`, så typkontrollen av hela projektet görs bara här. Det läser ingen `.env`.
+2. **Commit och push,** som du gör själv. Det är steg 7 till 12 och loggen.
+3. **Deploy:** du kör `npx vercel --prod` från projektmappen.
+4. **"Klart när" i den deployade butiken:**
+    1. Kassan visar fraktpris för ombud och hemleverans, beräknad leverans, och ombud och paketboxar nära postnumret.
+    2. Frakten blir 0 kr när varukorgen når gränsen, 399 kr för ombud.
+    3. Ett testköp: valt ombud och fraktpris syns på ordern i admin och på tacksidan.
+    4. Beloppet i Stripe är varor plus frakt.
+    5. Ett ombud som inte finns för postnumret avvisas med ett begripligt fel. Kassan visar bara giltiga ombud, så det prövas genom att skicka en order direkt i webbläsarens konsol på den deployade sidan:
+
+        ```js
+        fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_name: 'Test', customer_email: 'test@example.com', customer_phone: '0701234567',
+            shipping_street: 'Testgatan 1', shipping_postal_code: '39365', shipping_city: 'Kalmar',
+            shipping_method: 'ombud', service_point_id: '999999999',
+          }),
+        }).then((res) => res.json()).then(console.log)
+        ```
+
+        Svaret ska vara `{ status: 'fel', field: 'service_point_id', error: 'Det valda ombudet finns inte för ditt postnummer. Välj ett annat.' }`. Ingen order skapas, eftersom ombudet kontrolleras innan ordern sparas.
+    6. Ingen PostNord-nyckel i webbläsaren: jag hämtar alla JavaScript-filer från den deployade butiken och söker efter nyckeln, med ett skript som bara laddar `.env.postnord` och aldrig skriver ut nyckeln. Skriptet söker också efter `atapi2.postnord` och `apikey`, som inte heller ska finnas i webbläsarens kod.
+    7. README:n om AI kommer i steg 14.
+
+Får jag börja med punkt 1, bygget? Kommandot är:
+
+```
+cd "D:/Fullstack developer/6. Systemutveckling/fsu25d-systemutveckling-uppgift-1-min-egna-e-handel-csschef" && npm run build
+```

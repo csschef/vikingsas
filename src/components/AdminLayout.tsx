@@ -34,6 +34,7 @@ function AdminLayout() {
         <div className="admin-nav-links">
           <Link to="/admin/ordrar">Ordrar</Link>
           <Link to="/admin/produkter">Produkter</Link>
+          <Link to="/admin/frakt">Frakt</Link>
           <button type="button" onClick={handleLogout}>
             Logga ut
           </button>

@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 // Koderna i tabellen shipping_methods. Ombud gäller även paketboxar.
 export type ShippingMethodCode = 'ombud' | 'hem'
 
@@ -24,6 +26,25 @@ export type ShippingOption = {
 export function toOre(kronor: number) {
   return Math.round(kronor * 100)
 }
+
+const hasAtMostTwoDecimals = (kronor: number) => Math.abs(kronor * 100 - toOre(kronor)) < 1e-6
+
+// Det admin får ändra. Koden ändras aldrig, eftersom programmet styrs av den.
+export const ShippingMethodUpdate = z.object({
+  name: z.string().trim().min(1, 'Fyll i ett namn').max(50, 'Högst 50 tecken'),
+  price: z
+    .number('Fyll i ett pris')
+    .min(0, 'Priset kan inte vara negativt')
+    .max(10_000, 'Priset är för högt')
+    .refine(hasAtMostTwoDecimals, 'Högst två decimaler'),
+  // null betyder ingen fri frakt
+  free_from: z
+    .number('Fyll i en gräns eller lämna fältet tomt')
+    .gt(0, 'Gränsen måste vara större än 0')
+    .max(1_000_000, 'Gränsen är för hög')
+    .refine(hasAtMostTwoDecimals, 'Högst två decimaler')
+    .nullable(),
+})
 
 // Priset räknas alltid här på servern, utifrån tabellen och varukorgens summa. Fri frakt gäller från och med gränsen.
 export function calculateShipping(method: ShippingMethodRow, cartTotal: number): ShippingOption {

@@ -15,6 +15,7 @@ import adminProductsRouter from './routes/adminProducts.js'
 import adminOrdersRouter from './routes/adminOrders.js'
 import adminImportRouter from './routes/adminImport.js'
 import adminSearchRouter from './routes/adminSearch.js'
+import adminShippingRouter from './routes/adminShipping.js'
 import stripeWebhookRouter from './routes/stripeWebhook.js'
 import { sessionCookie } from './middleware/sessionCookie.js'
 import { requireAuth } from './middleware/requireAuth.js'
@@ -64,6 +65,7 @@ app.use('/api/admin/products', requireAuth, adminProductsRouter)
 app.use('/api/admin/orders', requireAuth, adminOrdersRouter)
 app.use('/api/admin/import', requireAuth, adminImportRouter)
 app.use('/api/admin/search', requireAuth, adminSearchRouter)
+app.use('/api/admin/shipping', requireAuth, adminShippingRouter)
 
 
 // Generell felhantering. Om en route kastar ett fel, loggas det och klienten får 500.

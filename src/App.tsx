@@ -12,6 +12,7 @@ import AdminProductsPage from './pages/AdminProductsPage'
 import AdminProductFormPage from './pages/AdminProductFormPage'
 import AdminOrdersPage from './pages/AdminOrdersPage'
 import AdminOrderDetailPage from './pages/AdminOrderDetailPage'
+import AdminShippingPage from './pages/AdminShippingPage'
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
             <Route path="produkter/:id" element={<AdminProductFormPage />} />
             <Route path="ordrar" element={<AdminOrdersPage />} />
             <Route path="ordrar/:id" element={<AdminOrderDetailPage />} />
+            <Route path="frakt" element={<AdminShippingPage />} />
           </Route>
         </Routes>
       </Router>
