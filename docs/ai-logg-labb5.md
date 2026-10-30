@@ -2504,3 +2504,39 @@ README:n är skriven i jag-form, och integrationerna har ett avsnitt var med "Va
 7. **Om något strular:** "Kassan säger att leveransalternativet inte kunde kontrolleras". Sök efter "Integrationsfel mot PostNord" i loggen på Vercel. Hos mig saknades ett tecken i nyckeln.
 
 Ska jag skriva ett utkast i din stil, som du sedan läser igenom och ändrar, eller vill du skriva någon del själv?
+
+---
+
+## Prompt 48 (30 okt 2026)
+
+> Ja gör det, ain jag använder för att verifiera dig och kontrolelra dig var Chat GPT
+
+### Svar
+
+**Steg 14: utkast till README**
+
+Utkastet är skrivet i jag-form, i samma stil som avsnitten om de andra integrationerna. Det står att ChatGPT granskade mina svar.
+
+**Nya avsnitt under Integrationer**
+
+- **"Frakt med PostNord":** vad kunden ser, hur ett köp med frakt går till i fem steg, och "Val jag har gjort". Där står adaptern som går att byta, priserna i databasen, hur gränserna för fri frakt räknades fram, paketboxar, frakt bara inom Sverige, att kunden kan handla även när PostNord inte svarar, skillnaden mellan ett tekniskt fel och ett nej, att leveranstiden är en uppskattning, skyddet av tacksidan och nyckeln.
+- **"Så använde jag AI i labb 5":** verktyget, ChatGPT som granskare, hur nycklarna skyddades, prompterna i korthet med länk till hela loggen, vad AI:n föreslog och vad som skilde sig från PostNords dokumentation med länk till avvikelserna, och hur det kontrollerades: sandlådan, testerna som först gav 9 fel av 56, och felet med nyckeln i produktion.
+
+**Ändringar i resten av README:n**
+
+- **Funktioner:** frakten för kunden, och för admin val av ombud i efterhand och fraktpriser.
+- **Tekniker:** PostNord och Nodes inbyggda testkörare.
+- **Kom igång:** PostNord under Konton, migrationerna om databasen redan finns, och hur frakt och tester provas lokalt.
+- **Kommandon:** `npm test`.
+- **Databas:** vad `schema.sql`, `seed.sql` och `db/migrations/` är till för. `seed.sql` lägger nu också in de två fraktsätten.
+- **Deploy:** PostNords variabler på Vercel, vilka som kan utelämnas, och att en ändrad variabel gäller först efter nästa deploy.
+- **Om något strular:** tacksidan som inte nås när Vite startat på en annan port, och kassan som inte visar ombud, med felet i nyckeln som exempel.
+- **Dokumentation:** länkar till loggen och avvikelserna.
+
+Inga långa streck, pilar eller tre punkter.
+
+**Läs igenom och ändra**
+
+Det är din README, så läs den och ändra det som inte låter som du. Kontrollera särskilt två saker: att prompterna i korthet stämmer med hur du minns arbetet, och att meningen om felet med nyckeln stämmer, eftersom du skrev "troligtvis".
+
+Sedan är alla steg i planen gjorda. Det som återstår är din commit av README:n och loggen, och en deploy om du vill att README:n ska ligga med i den deployade versionen. README:n påverkar inte själva butiken.

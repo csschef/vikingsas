@@ -48,15 +48,18 @@ Varje sås har en egen sektion på startsidan med styrka, pris och en utfällbar
 - priser i SEK, EUR, NOK eller DKK
 - varukorg som sparas i databasen och kopplas till besökaren med en cookie, kunder behöver inte logga in
 - kassa med namn, e-post, telefon och adress, och kortbetalning med Stripe
-- tacksida som visar ordern och om betalningen har gått igenom
+- frakt med PostNord: ombud, paketbox eller hemleverans, beräknad leverans och fri frakt över en gräns
+- tacksida som visar ordern, frakten och om betalningen har gått igenom
 
 ### Admin
 
 - inloggning med express-session, sessionerna sparas i Postgres och lösenorden hashas med bcrypt
 - skapa och redigera produkter, och slå av eller på dem med en switch
 - importera leverantörens produkter som CSV eller XML
-- lista med alla ordrar och en detaljsida per order, med betalstatus
+- lista med alla ordrar och en detaljsida per order, med betalstatus och frakt
 - ändra orderstatus
+- välja ombud i efterhand för ordrar där PostNord inte svarade
+- ändra fraktpriser och gränser för fri frakt
 
 Adminpanelen länkas inte från butiken, den nås på `/admin/logga-in`.
 
@@ -67,7 +70,8 @@ Adminpanelen länkas inte från butiken, den nås på `/admin/logga-in`.
 - PostgreSQL hos Supabase, egen SQL via `pg`
 - express-session med connect-pg-simple, bcryptjs
 - Zod för att validera data från andra system och från webbläsaren
-- Algolia för sökningen, Stripe för betalningen, Frankfurter för valutakurserna
+- Algolia för sökningen, Stripe för betalningen, Frankfurter för valutakurserna, PostNord för frakten
+- Nodes inbyggda testkörare via tsx
 - Vercel
 
 ## Vad jag övade på
@@ -141,6 +145,62 @@ Val jag har gjort:
 - Egen validering med en röd rad under fältet i stället för webbläsarens varningar. Servern kollar samma sak med Zod, eftersom det går att runda webbläsaren.
 - Den hemliga nyckeln finns bara på servern. React får bara den publika, `VITE_STRIPE_PUBLISHABLE_KEY`. Den byggs in i JavaScript-filen som alla besökare laddar ner, så på Vercel ligger den som Config och inte som Secret.
 
+### Frakt med PostNord
+
+I kassan väljer kunden ombud eller paketbox, eller hemleverans. När postnumret är ifyllt visas fraktalternativen med pris och beräknad leverans. Väljer kunden ombud visas de fem närmaste ombuden och de fem närmaste paketboxarna, och för det valda ombudet öppettider och en länk till kartan. Labben gjordes med AI, se nästa avsnitt.
+
+Så går det till:
+
+1. Kassan frågar `GET /api/shipping/options?postalCode=...` först när postnumret är fem siffror, inte vid varje tangenttryckning. Samma postnummer frågas bara en gång.
+2. Servern hämtar fraktpriserna ur databasen, räknar priset på varukorgen i databasen och frågar PostNord om ombud och leveranstid. Kassan får butikens format, aldrig PostNords svar.
+3. Väljer kunden ett ombud hämtas leveranstiden till just det ombudet.
+4. Vid beställningen skickar React bara fraktsättet och ombudets id, aldrig ett pris. Servern kontrollerar att ombudet finns för postnumret, räknar priset igen och sparar fraktsätt, pris och ombud på ordern.
+5. Frakten blir en egen rad i Stripe. Ordern och Stripe får samma rader, så `total_amount` är alltid samma belopp som kunden betalar.
+
+Val jag har gjort:
+
+- **En adapter som går att byta.** `server/integrations/shippingCarrier.ts` beskriver vad ett transportbolag ska kunna: hitta ombud och räkna fram leveranstid. `postnordAdapter.ts` är den enda filen som vet hur PostNord fungerar. Vill jag byta bolag skriver jag en ny adapter och ändrar en rad.
+- **Fraktpriserna ligger i databasen**, i tabellen `shipping_methods`, så att de kan ändras i admin under Frakt utan ny deploy. Ordern sparar en kopia av namnet och priset, samma princip som orderraderna, så en gammal order visar det kunden faktiskt betalade.
+- **Priser och gränser för fri frakt.** Ombud kostar 69 kr med fri frakt från 399 kr, hemleverans 139 kr med fri frakt från 499 kr. Jag simulerade varukorgar utifrån butikens priser och jämförde med PostNords prislista. Vid 399 kr ligger fler kunder precis under gränsen än över den, så en sås till ger fri frakt. 69 kr är mindre än en typisk sås men mer än de billigaste produkterna, så nära gränsen är det billigare att lägga till chiliflakes än att betala frakten. Hemleverans kostar PostNord mer, därför ligger både pris och gräns högre.
+- **Paketboxar finns med**, i en egen grupp. PostNord rekommenderar att ombud och paketboxar hämtas var för sig.
+- **Bara inom Sverige.** Valutaväljaren räknar om priserna, men kunden betalar i kronor, och kassan och varukorgen säger att vi bara skickar inom Sverige.
+- **Kunden kan handla även om PostNord inte svarar.** Ordern får ombudsstatus Väntar, och kassan säger att vi väljer ett ombud nära kundens adress. I admin markeras betalda ordrar som saknar ombud, och där kan jag hämta ombud från PostNord och spara ett i efterhand. Villkoren står i samma `UPDATE` som sparar valet, så två administratörer kan inte skriva över varandra.
+- **Ett tekniskt fel är inte samma sak som ett nej.** Säger PostNord att det inte finns några ombud går ombud inte att välja, kunden får hemleverans. Säger PostNord att postnumret inte finns visas ett fel under postnummerfältet. Avvisar PostNord anropet loggas det som ett integrationsfel, inte som att PostNord ligger nere.
+- **Leveranstiden är en uppskattning.** Den räknas från när paketet lämnas till PostNord, inte från när kunden beställer: före kl. 12 på vardagar samma dag kl. 14, annars nästa vardag. Det är mina egna antaganden, och helgdagar hanteras inte än. Går leveranstiden inte att hämta står det "Beräknad leveranstid är tillfälligt otillgänglig.", och det stoppar aldrig ett köp.
+- **Tacksidan visar bara ordern för den som lade den.** Utöver Stripes sessions-id måste ordern höra till varukorgen i besökarens kaka, eftersom id:t står i adressen och kan hamna i historiken.
+- **Nyckeln skickas i adressen**, eftersom PostNords dokumentation säger så. Därför skrivs adressen aldrig i något felmeddelande, och nyckeln maskeras i allt som loggas.
+
+### Så använde jag AI i labb 5
+
+Labb 5 var en AI-labb. AI skrev koden, och jag kontrollerade den mot PostNords dokumentation och sandlåda. Jag använde Claude Code i VS Code, som kan läsa projektet. För att kontrollera Claude lät jag ChatGPT granska planen och koden, och tog med dess synpunkter som nya krav. Hela konversationen finns i [docs/ai-logg-labb5.md](docs/ai-logg-labb5.md), och skillnaderna mot PostNords dokumentation i [docs/postnord-avvikelser.md](docs/postnord-avvikelser.md).
+
+**Nycklarna.** `.env` är blockerad för Claude i `.claude/settings.json`, och jag godkände varje filändring och varje terminalkommando innan det kördes. Testskripten mot sandlådan laddade bara `.env.postnord`, en egen fil med PostNords två variabler. Nyckeln har aldrig klistrats in i en chatt.
+
+**Prompterna i korthet**, ordagrant i loggen:
+
+- Läs labben i kursrepot, sammanfatta den och gör en gemensam plan. Adaptern ska göra det enkelt att byta transportbolag.
+- Fraktpriserna ska ligga i databasen, och gamla ordrar ska behålla sitt fraktpris.
+- Räkna fram gränserna för fri frakt utifrån butikens priser och PostNords priser, så att kunden oftast hamnar precis under gränsen.
+- Om PostNord inte svarar ska ordern skapas och ombudet väljas i efterhand i admin.
+- Jag vill ha med paketboxar.
+- Kontrollera mot den dokumenterade endpointen, gör inga antaganden om svarets struktur och ändra ingen kod förrän du visat vad som behöver ändras.
+- Granskningen från ChatGPT: skilj på olika sorters fel, räkna `startTime` från när paketet lämnas, håll leveranstid och ombudssökning oberoende, och testa med mockad `fetch`.
+
+**Vad AI:n föreslog, och vad som skilde sig**
+
+- Claudes första version av leveranstiden använde `/rest/transport/v1/transittime/getTransitTimeInformation.json`. Den gav 502. Dokumentationen anger `/transittime/addresstoaddress` och `/transittime/addresstolocation`, med andra parametrar.
+- Svaret antogs vara ett objekt. Det är en lista med en rad per variant av tjänsten, och fel kommer som rader i ett svar med 200 OK. Att kontrollera `response.ok` räcker alltså inte.
+- `startTime` sattes först till när kunden beställer. Det är när PostNord får paketet, så nu räknas den fram från bryttid och överlämningstid.
+- Ombudssökningen antogs ge bemannade ombud. Fyra av fem var paketboxar.
+- Claude flyttade nyckeln från adressen till ett huvud efter ett test. Det fungerade, men det står inte i dokumentationen, så den flyttades tillbaka och maskeras i stället.
+- PostNords dokumentation hade egna fel: listan med ombudstyper ger 400 för Sverige, latitud och longitud har bytt plats, exemplet för Address to Location pekar på fel endpoint, versionen står inte, gata och nummer står som obligatoriska men behövs inte, och exempel på svar saknas.
+
+**Hur det kontrollerades och löstes**
+
+- Varje antagande prövades mot sandlådan med skript utanför repot, och de riktiga svaren jämfördes med dokumentationen innan Zod-schemana skrevs.
+- Testerna skrevs innan de sista bristerna rättades. Första körningen gav 9 fel av 56: en bruten anslutning blev "oväntat svar", omöjliga datum som 30 februari blev leveranstider, och alla fel från `/addresstolocation` blev "ogiltigt ombud". Rättningen av datumen gav två nya fel, som också rättades. I dag finns 111 tester och alla går igenom.
+- I produktion visade kassan först inga ombud. Loggen sa "Integrationsfel mot PostNord", och det visade sig att ett tecken saknades i nyckeln på Vercel. Kunden kunde ändå handla under tiden.
+
 ## Kom igång
 
 Den deployade butiken ligger på https://chili-ehandel.vercel.app
@@ -152,6 +212,7 @@ Alla är gratis, och bara testlägen används:
 - **Supabase** för databasen (Postgres)
 - **Algolia** för sökningen
 - **Stripe** i testläge, och [Stripe CLI](https://docs.stripe.com/stripe-cli) för att ta emot webhooks lokalt
+- **PostNord** för ombud och leveranstid. Skapa ett konto på [atdeveloper.postnord.com](https://atdeveloper.postnord.com), välj Customer plan och skapa en nyckel för sandlådan
 
 Leverantörens API och Frankfurter behöver inga egna konton.
 
@@ -165,7 +226,7 @@ npm install
 
 Kopiera `.env.example` till `.env` och fyll i värdena. Där står varje variabel och var den hittas.
 
-Kör `db/schema.sql` och sedan `db/seed.sql` i Supabase SQL editor. Skapa ett adminkonto:
+Kör `db/schema.sql` och sedan `db/seed.sql` i Supabase SQL editor. Finns databasen redan körs i stället de filer i `db/migrations/` som inte är körda, se Databas. Skapa ett adminkonto:
 
 ```
 npx tsx --env-file=.env create-admin.ts <e-post> <lösenord>
@@ -209,6 +270,10 @@ stripe checkout sessions expire <cs_test_...>
 
 Sessionens id står i kolumnen `stripe_session_id` i `orders`.
 
+**Frakt.** Lägg något i varukorgen, gå till kassan och skriv ett postnummer, till exempel 393 65. Sandlådan ger ombud och leveranstider med PostNords testdata. 00000 ger felet för ett postnummer som inte finns. Fraktpriserna ändras i admin under Frakt.
+
+**Tester.** `npm test` kör testerna för frakten. De använder låtsade svar från PostNord, så de behöver ingen `.env` och anropar aldrig PostNord.
+
 ## Kommandon
 
 | Kommando            | Gör                                                     |
@@ -218,14 +283,16 @@ Sessionens id står i kolumnen `stripe_session_id` i `orders`.
 | `npm run build`     | typkontroll med `tsc -b`, sedan bygger frontend         |
 | `npm run preview`   | visar det byggda resultatet lokalt                      |
 | `npm run lint`      | kör oxlint                                              |
+| `npm test`          | kör testerna, utan nycklar och utan anrop till PostNord |
 | `npx vercel --prod` | deployar till produktion                                |
 
 ## Databas
 
 SQL:en körs manuellt i Supabase SQL editor, det finns ingen automatisk migrering.
 
-- `db/schema.sql` skapar tabellerna
-- `db/seed.sql` lägger in de tio produkterna. Körs bara en gång, `title` är inte unik så en andra körning ger dubbletter
+- `db/schema.sql` skapar tabellerna i en ny, tom databas
+- `db/seed.sql` lägger in de tio produkterna och de två fraktsätten. Körs bara en gång, `title` är inte unik så en andra körning ger dubbletter
+- `db/migrations/` innehåller ändringar som körs en gång mot en databas som redan finns, en fil per ändring med datum i namnet. Samma ändringar står också sist i `db/schema.sql`
 
 Supabase-projektet får inte pausas, då slutar den deployade butiken visa produkter.
 
@@ -253,6 +320,8 @@ Nycklarna ligger som miljövariabler på Vercel, samma namn som i `.env.example`
 - `VITE_STRIPE_PUBLISHABLE_KEY` måste finnas innan deployen, Vite bygger in den i frontend
 - `STRIPE_WEBHOOK_SECRET` kommer från webhook-endpointen i Stripe Dashboard, inte från `stripe listen`. Endpointen pekar på `https://chili-ehandel.vercel.app/api/stripe/webhook` och lyssnar på samma tre händelser som i Kom igång.
 
+För frakten behövs `POSTNORD_API_URL` och `POSTNORD_API_KEY`. `SHOP_POSTAL_CODE`, `SHIPPING_CUTOFF_HOUR` och `SHIPPING_HANDOVER_HOUR` kan utelämnas, då gäller 39365, 12 och 14. En ändrad variabel gäller först efter nästa deploy.
+
 Vercel kör `vite build` i molnet, inte `npm run build`. Typkontrollen sker alltså bara lokalt, körs innan deploy.
 
 ## Om något strular
@@ -273,6 +342,10 @@ $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Env
 
 **Tacksidan står kvar på "Väntar på betalningen".** Webhooken kommer inte fram. Lokalt: kolla att `stripe listen` är igång och att `STRIPE_WEBHOOK_SECRET` är den den skrev ut. I produktion: öppna webhook-endpointen i Stripe Dashboard, där syns varje försök och vad servern svarade.
 
+**Tacksidan kan inte nås efter betalningen lokalt.** Stripe skickar kunden till `CLIENT_URL`. Startade Vite på en annan port än den som står där hamnar kunden fel.
+
+**Kassan visar inga ombud, eller säger att leveransalternativet inte kunde kontrolleras.** Sök på "Integrationsfel mot PostNord" eller "PostNord svarar inte" i loggen på Vercel. Raden visar vad PostNord svarade, och nyckeln är maskerad. Hos mig saknades ett tecken i `POSTNORD_API_KEY` på Vercel.
+
 ## Dokumentation
 
-Tidsplan, sitemap och ER-diagram ligger i [docs/](docs/).
+Tidsplan, sitemap och ER-diagram ligger i [docs/](docs/). Där finns också [loggen över hur jag använde AI i labb 5](docs/ai-logg-labb5.md) och [skillnaderna mot PostNords dokumentation](docs/postnord-avvikelser.md).
