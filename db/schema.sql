@@ -78,3 +78,10 @@ ALTER TABLE orders ADD COLUMN shipping_postal_code TEXT;
 ALTER TABLE orders ADD COLUMN shipping_city TEXT;
 
 ALTER TABLE products ADD COLUMN image_path TEXT;
+
+CREATE TABLE shipping_methods (
+  code TEXT PRIMARY KEY CHECK (code IN ('ombud', 'hem')),
+  name TEXT NOT NULL,
+  price NUMERIC(10,2) NOT NULL CHECK (price >= 0),
+  free_from NUMERIC(10,2) CHECK (free_from > 0)
+);

@@ -1450,3 +1450,186 @@ Kunden kan fortsätta med ombud som väljs i efterhand, men kassan säger tydlig
 Ändrade eller nya filer sedan labben började, inget är committat: `server/integrations/shippingCarrier.ts`, `server/integrations/postnordAdapter.ts`, `server/integrations/postnordAdapter.test.ts`, `server/lib/handoverTime.ts`, `server/lib/handoverTime.test.ts`, `package.json`, `.env.example` och `docs/ai-logg-labb5.md`.
 
 Nästa steg är G, dokumentet `docs/postnord-avvikelser.md`, och sedan steg 6 och 7 i huvudplanen. Godkänner du steg G?
+
+---
+
+## Prompt 27 (30 okt 2026)
+
+> Bra att testerna faktiskt upptäckte fel i implementationen och att dessa kunde korrigeras innan vi gick vidare.
+>
+> Skriv docs/postnord-avvikelser.md med fokus på:
+>
+> Vilka antaganden vi gjorde om PostNords API.
+>
+> Vilka antaganden som visade sig vara felaktiga.
+>
+> Vad de verkliga API-svaren visade.
+>
+> Hur vi anpassade implementationen.
+>
+> Vilka begränsningar som fortfarande finns kvar.
+>
+> Hur testerna hjälpte oss att upptäcka och korrigera brister.
+>
+> Skilj tydligt mellan sådant vi verifierat mot PostNords sandbox och sådant vi bara verifierat genom mockade tester.
+>
+> Dokumentet ska vara sakligt, begripligt och användbart för laborationens redovisning. Undvik att göra det onödigt omfattande.
+>
+> Ändra ingen kod i steg G.
+>
+> När dokumentet är klart vill jag ha en kort sammanfattning och därefter en översikt över vad som återstår innan hela PostNord-integrationen fungerar i kassan.
+
+### Svar
+
+Skrivet för: den som rättar och lyssnar på redovisningen av labb 5. Dokumentet är också underlag till README.
+
+**Steg G: klart**
+
+`docs/postnord-avvikelser.md` är skriven. Ingen kod är ändrad.
+
+**Kort sammanfattning**
+
+- Dokumentet har en tabell för varje API, med antagande, vad som visade sig, anpassning och om det är verifierat i sandlådan eller med mock.
+- Avvikelser i PostNords egen dokumentation: versionen står inte, exemplet för Address to Location pekar på fel endpoint, latitud och longitud har bytt plats, listan med ombudstyper ger 400 för Sverige, gata och nummer är markerade som obligatoriska men behövs inte, och svarsexempel saknas.
+- Antaganden som var fel i AI:ns första version: endpointen för leveranstid (502), att sökningen bara ger bemannade ombud, att svaret är ett objekt, att fel alltid ger en felkod, och att `startTime` kan vara tiden för beställningen.
+- Testerna hittade tre brister, och en fjärde i en av rättningarna. Efter det gick alla 56 tester igenom.
+- Ett eget avsnitt skiljer på det som är verifierat mot sandlådan och det som bara är verifierat med mock, och ett avsnitt listar begränsningarna som finns kvar.
+
+**Det som återstår innan PostNord-integrationen fungerar i kassan**
+
+Adaptern är klar och testad, men ingen route använder den än. Det som återstår är huvudplanens steg 6 till 14:
+
+6. **Databasen:** tabellen `shipping_methods` med ombud (69 kr, fri frakt från 399 kr) och hemleverans (139 kr, fri frakt från 499 kr), startvärden i `db/seed.sql`, och en funktion som räknar fraktpriset utifrån varukorgen.
+7. **Route för kassan:** postnummer in, och fraktalternativ med pris, ombud och paketboxar och leveranstid ut. Utfallen blir kassans egna texter:
+    - Ogiltigt postnummer: fel under postnummerfältet.
+    - Ingen leveranstid: "Beräknad leveranstid är tillfälligt otillgänglig."
+    - Inga ombud: hemleverans i första hand.
+    - PostNord svarar inte: ombud som väljs i efterhand.
+    - Avvisat anrop: samma sak, med en text om att alternativet inte kunde kontrolleras, och ett integrationsfel i loggen.
+8. **Kolumner på `orders`:** fraktalternativ, dess namn och pris, ombudets id, landskod och namn, och ombudsstatus ("Vald" eller "Väntar").
+9. **Ordern och Stripe:** servern kontrollerar valt ombud mot ombudssökningen, räknar priset, sparar allt på ordern och lägger frakten som en egen rad i Stripe.
+10. **Kassan i React:** fraktval, en egen ombudsväljare med grupperna ombud och paketbox, öppettider och "Visa på karta", leveranstiden som uppskattning, och "Vi skickar bara inom Sverige".
+11. **Admin och tacksidan:** frakten på ordern, markering av "Väntar" och knappen "Hämta ombud".
+12. **Adminsida för fraktpriserna.**
+13. **Produktion:** `POSTNORD_API_URL` och `POSTNORD_API_KEY` på Vercel, databasändringarna i produktion, deploy och "Klart när" i den deployade butiken.
+14. **README:** avsnittet om AI, med underlag från loggen och avvikelsedokumentet.
+
+Det här är också ett bra läge för en commit. Utöver filerna från förra svaret har `docs/postnord-avvikelser.md` tillkommit.
+
+Godkänner du att vi börjar med steg 6?
+
+---
+
+## Prompt 28 (30 okt 2026)
+
+> Ja kör vidare
+
+### Svar
+
+**Steg 6: fraktpriser i databasen, koden klar**
+
+Inga routes, ingen Stripe-kod och ingen kassa är ändrad, och inget är kört mot databasen.
+
+- **`db/schema.sql`:** tabellen `shipping_methods` med `code` (`ombud` eller `hem`, som primärnyckel), `name`, `price` och `free_from`. Priset får inte vara negativt, och `free_from` får vara tomt, vilket betyder ingen fri frakt. Koden är låst till de två värdena, eftersom programmet bara vet hur de två ska levereras. Ett nytt fraktsätt kräver alltså både en ny rad och ny kod.
+- **`db/seed.sql`:** startvärdena, "Ombud eller paketbox" för 69 kr med fri frakt från 399 kr, och "Hemleverans" för 139 kr med fri frakt från 499 kr.
+- **`server/lib/shippingPrice.ts` (ny):** `calculateShipping(method, cartTotal)` räknar priset för ett fraktalternativ. Fri frakt gäller från och med gränsen. Beräkningen sker i hela ören, så att avrundning i decimaltal inte kan flytta gränsen. Svaret innehåller också `amountToFreeShipping`, alltså hur mycket som fattas till fri frakt, så att kassan kan visa till exempel "Handla för 90 kr till för fri frakt". Filen använder ingen databas, så den går att testa.
+- **`server/lib/shippingMethods.ts` (ny):** hämtar alternativen ur tabellen, sorterade på pris, och räknar priset för varukorgens summa.
+- **`server/lib/cart.ts`:** `getCartTotal(cartId)` räknar varukorgens summa med dagens priser i databasen, aldrig med priser från webbläsaren.
+- **`server/lib/shippingPrice.test.ts` (ny):** 8 tester: under gränsen, exakt på gränsen, en krona under, över, hemleveransens egen gräns, utan gräns, decimaler och tom varukorg.
+
+**Resultat:** typkontrollen utan fel, och 64 av 64 tester godkända.
+
+**Databasen**
+
+Tabellen finns inte i databasen än. Databasen delas mellan lokal utveckling och den deployade butiken, men den deployade koden använder inte tabellen, så den påverkas inte. Det här ska köras:
+
+```sql
+CREATE TABLE shipping_methods (
+  code TEXT PRIMARY KEY CHECK (code IN ('ombud', 'hem')),
+  name TEXT NOT NULL,
+  price NUMERIC(10,2) NOT NULL CHECK (price >= 0),
+  free_from NUMERIC(10,2) CHECK (free_from > 0)
+);
+
+INSERT INTO shipping_methods (code, name, price, free_from)
+VALUES
+  ('ombud', 'Ombud eller paketbox', 69.00, 399.00),
+  ('hem', 'Hemleverans', 139.00, 499.00);
+```
+
+Mitt förslag är att du kör det i SQL-editorn i Supabase och kontrollerar med `SELECT * FROM shipping_methods;`. Då behöver jag aldrig ladda `DATABASE_URL`. Alternativet är att jag kör det med ett skript, men det kräver att databasens adress laddas i processen, på samma sätt som PostNords nycklar i `.env.postnord`. Varnar Supabase för att tabellen saknar RLS räcker det att Data API är avstängt i projektet, eftersom butiken bara når databasen via servern.
+
+Säg till när tabellen finns, så går vi vidare till steg 7, routen för kassan.
+
+---
+
+## Prompt 29 (30 okt 2026)
+
+> SQL:en är körd.
+
+### Svar
+
+Bra. Här är förslaget för steg 7. Ingen kod är skriven än.
+
+**Filer**
+
+- `server/lib/shippingQuote.ts` (ny): en funktion som översätter adapterns utfall till svaret till kassan och avgör vad som ska loggas. Den gör inga anrop och använder ingen databas, så den går att testa.
+- `server/routes/shipping.ts` (ny): två endpoints, se nedan.
+- `server/app.ts`: `app.use('/api/shipping', shippingRouter)`, efter `/api/search`.
+- `server/lib/shippingQuote.test.ts` (ny): tester för översättningen.
+- `.env.example`: `SHOP_POSTAL_CODE=39365`. Koden använder 39365 om variabeln saknas, så Vercel behöver ingen ny variabel.
+
+**Endpoint 1: `GET /api/shipping/options?postalCode=39365`**
+
+1. Postnumret kontrolleras med Zod: fem siffror, mellanslag tillåtet. Annars 400.
+2. Varukorgens summa räknas på servern, från sessionens varukorg.
+3. Samtidigt hämtas fraktalternativen ur databasen, ombud och paketboxar, och leveranstiden för hemleverans (17) och för ombud till postnumret (19).
+4. Svaret:
+
+    ```json
+    {
+      "options": [
+        { "code": "ombud", "name": "Ombud eller paketbox", "price": 69, "regularPrice": 69, "freeFrom": 399, "amountToFreeShipping": 90, "estimatedDelivery": "2026-11-02" },
+        { "code": "hem", "name": "Hemleverans", "price": 139, "regularPrice": 139, "freeFrom": 499, "amountToFreeShipping": 190, "estimatedDelivery": null }
+      ],
+      "servicePoints": [],
+      "servicePointStatus": "found",
+      "unavailableKinds": []
+    }
+    ```
+
+`servicePoints` är ombud och paketboxar i butikens format. `servicePointStatus` styr kassan:
+
+- `found`: kunden väljer ombud eller paketbox. Saknas en grupp står den i `unavailableKinds`, och kassan kan säga till exempel "Paketboxar kan inte visas just nu".
+- `none`: PostNord svarade men hittade inga ombud. Ombud tas bort ur `options`, och hemleverans erbjuds. Säger PostNord att hemleverans inte erbjuds till postnumret blir det `manual` i stället.
+- `manual`: PostNord svarade inte. Ombud går att välja, och ombud väljs åt kunden i efterhand.
+- `unverified`: PostNord avvisade anropet eller svarade i en form vi inte känner igen. Som `manual`, men kassan säger tydligt att leveransalternativet inte kunde kontrolleras.
+
+Övrigt:
+
+- `estimatedDelivery: null` betyder att kassan visar "Beräknad leveranstid är tillfälligt otillgänglig.", oavsett orsak.
+- Ogiltigt postnummer, från ombudssökningen eller leveranstiden: 400 med `{ "status": "fel", "field": "shipping_postal_code", "error": "Postnumret finns inte. Kontrollera det." }`.
+- Hemleverans som PostNord säger inte erbjuds till postnumret tas bort ur `options`.
+- Svaret innehåller aldrig PostNords texter eller skäl.
+
+**Endpoint 2: `GET /api/shipping/estimate?postalCode=39365&servicePointId=331366`**
+
+Anropas när kunden har valt ett ombud eller en paketbox, och räknar leveranstiden till just den platsen. Svaret är `{ "estimatedDelivery": "2026-11-02" }` eller `null`. Ombudets id kontrolleras som siffror.
+
+**Loggning**
+
+- PostNord svarar inte (`unavailable`): `console.warn`, "PostNord svarar inte: ...".
+- Avvisat anrop eller oväntat svar (`rejected`, `invalidResponse`): `console.error`, "Integrationsfel mot PostNord: ...".
+- Övriga utfall: `console.warn` med skälet.
+
+**Tester**
+
+Varje `servicePointStatus`, ogiltigt postnummer från båda källorna, partiellt resultat, saknad leveranstid, hemleverans som inte erbjuds, att ombud tas bort vid `none`, och att svaret aldrig innehåller PostNords skäl.
+
+**Inte i steg 7**
+
+Kolumner på `orders` (steg 8), ordern och Stripe (steg 9) och kassan i React (steg 10).
+
+En sak att tänka på till steg 10: varje uppslag ger fyra anrop till PostNord, två för ombud och paketboxar och två för leveranstider. Kassan bör därför bara fråga när postnumret är komplett.
+
+Godkänner du steg 7?

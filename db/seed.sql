@@ -10,3 +10,8 @@ VALUES
   ('VS-008', true, 50, 'Carolina Reaper', 'Carolina Reaper höll världsrekordet i styrka i tio år. Sås för den som vet vad den ger sig in på.', 120, 149.00, 8, '/img/8.webp', 'Carolina reaper, ättika, vatten, tomat, vitlök, salt', 155, 37, 0.60, 0.10, 6.50, 3.50, 1.40, 3.80),
   ('VS-009', true, 50, '7-Pot Douglah', 'Chokladbrun och rejält stark. Namnet kommer av att en enda chili sägs räcka till sju grytor.', 120, 165.00, 9, '/img/9.webp', '7-pot douglah, ättika, vatten, vitlök, salt', 142, 34, 0.70, 0.10, 5.50, 2.80, 1.50, 4.00),
   ('VS-010', true, 50, 'Pepper X', 'Pepper X, framavlad av den galne vetenskapsmannen "Smokin'' Ed" Currie tog världsrekordet 2023. Den är så stark så öronen trillar av.', 120, 179.00, 10, '/img/10.webp', 'Pepper X, ättika, vatten, vitlök, salt', 134, 32, 0.80, 0.20, 4.50, 2.00, 1.60, 4.20);
+
+INSERT INTO shipping_methods (code, name, price, free_from)
+VALUES
+  ('ombud', 'Ombud eller paketbox', 69.00, 399.00),
+  ('hem', 'Hemleverans', 139.00, 499.00);
