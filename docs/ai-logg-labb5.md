@@ -183,13 +183,13 @@ Jag simulerade 200 000 varukorgar utifrån butikens priser. Antaganden: 30 % av 
 
 För varje gräns räknade jag två andelar: kunder som ligger **precis under** (högst en typisk produkt, 89 kr, från gränsen) och kunder som **redan är över** och får fri frakt utan att köpa mer. Målet är att de som ligger precis under ska vara fler än de som redan är över.
 
-| Gräns | Precis under | Redan över |
-|---|---|---|
-| 299 kr | 19 % | 26 % |
-| 349 kr | 16 % | 18 % |
-| 399 kr | 12 % | 11 % |
-| 449 kr | 9 % | 7 % |
-| 499 kr | 6 % | 4 % |
+| Gräns  | Precis under | Redan över |
+| ------ | ------------ | ---------- |
+| 299 kr | 19 %         | 26 %       |
+| 349 kr | 16 %         | 18 %       |
+| 399 kr | 12 %         | 11 %       |
+| 449 kr | 9 %          | 7 %        |
+| 499 kr | 6 %          | 4 %        |
 
 **Förslag**
 
@@ -231,21 +231,21 @@ Vikterna är uppskattningar. Väg gärna ett riktigt paket med två eller tre fl
 Ombud (PostNord kostar i snitt 129 kr, snittorder 193 kr):
 
 | Kunden betalar | Butiken står för | Andel av ordervärdet |
-|---|---|---|
-| 49 kr | 80 kr | 41 % |
-| 59 kr | 70 kr | 36 % |
-| 69 kr | 60 kr | 31 % |
-| 79 kr | 50 kr | 26 % |
-| 89 kr | 40 kr | 21 % |
+| -------------- | ---------------- | -------------------- |
+| 49 kr          | 80 kr            | 41 %                 |
+| 59 kr          | 70 kr            | 36 %                 |
+| 69 kr          | 60 kr            | 31 %                 |
+| 79 kr          | 50 kr            | 26 %                 |
+| 89 kr          | 40 kr            | 21 %                 |
 
 Hemleverans (PostNord kostar 224 kr, snittorder 210 kr):
 
 | Kunden betalar | Butiken står för | Andel av ordervärdet |
-|---|---|---|
-| 99 kr | 125 kr | 59 % |
-| 119 kr | 105 kr | 50 % |
-| 139 kr | 85 kr | 40 % |
-| 159 kr | 65 kr | 31 % |
+| -------------- | ---------------- | -------------------- |
+| 99 kr          | 125 kr           | 59 %                 |
+| 119 kr         | 105 kr           | 50 %                 |
+| 139 kr         | 85 kr            | 40 %                 |
+| 159 kr         | 65 kr            | 31 %                 |
 
 Med PostNords offentliga priser kostar frakten nästan lika mycket som varorna i en vanlig order. Även om kunden betalade hela kostnaden skulle frakten bli två tredjedelar av ordervärdet för ombud, och det avskräcker. Butiken behöver alltså stå för en del. Jag hittade inga offentliga siffror på hur mycket kunder accepterar att betala, så kundsidan bygger på butikens egna priser.
 
@@ -457,7 +457,7 @@ Källor:
 
 > Det gick bara att kopiera till urklipp så här kommer rubbet. Du behöver inte spara hela texten som en prompt utan dölj det som kommer efter denna meningen från ai-logg-labb5.md:
 >
-> *(PostNords OpenAPI-specifikation för Service Points V5, inklistrad som JSON. Utelämnad här.)*
+> _(PostNords OpenAPI-specifikation för Service Points V5, inklistrad som JSON. Utelämnad här.)_
 
 ### Svar
 
@@ -650,37 +650,38 @@ Från butikens postnummer 393 65, med `startTime` satt till nuvarande tid i Sver
 
 1. **Gränssnittet** (`shippingCarrier.ts`): `estimateDelivery` tar ett objekt i stället för två postnummer, så att kassan kan fråga om rätt leveranssätt:
 
-    ```ts
-    export type DeliveryRequest = {
-      fromPostalCode: string
-      toPostalCode: string
-      toStreet?: string
-      delivery: 'home' | 'servicePoint'
-      servicePointId?: string
-    }
-    ```
+   ```ts
+   export type DeliveryRequest = {
+     fromPostalCode: string
+     toPostalCode: string
+     toStreet?: string
+     delivery: 'home' | 'servicePoint'
+     servicePointId?: string
+   }
+   ```
 
 2. **Adaptern** (`postnordAdapter.ts`): den gissade koden (`getTransitTimeInformation.json`, `transitTimeResponse`) tas bort och ersätts med `v1` enligt dokumentationen:
-    - Hemleverans: `/rest/transport/v1/transittime/addresstoaddress` med `serviceCodes=17`.
-    - Valt ombud eller paketbox: `/rest/transport/v1/transittime/addresstolocation` med `serviceCodes=19`, `destinationLocationId` = ombudets id och `destinationLocationType=servicepoint`.
-    - Ombud innan kunden har valt: `/addresstoaddress` med `serviceCodes=19`, som räknar till PostNords standardombud för postnumret.
-    - `startTime` är nuvarande tid i Sverige, och `serviceGroup=SE`, `originPostCode=39365`, `originCountryCode=SE` och `destinationCountryCode=SE`.
-    - Finns kundens gatuadress, till exempel "Storgatan 5", delas den upp i `destinationStreetName` och `destinationStreetNumber`, eftersom dokumentationen ber om det. Annars skickas bara postnumret.
+   - Hemleverans: `/rest/transport/v1/transittime/addresstoaddress` med `serviceCodes=17`.
+   - Valt ombud eller paketbox: `/rest/transport/v1/transittime/addresstolocation` med `serviceCodes=19`, `destinationLocationId` = ombudets id och `destinationLocationType=servicepoint`.
+   - Ombud innan kunden har valt: `/addresstoaddress` med `serviceCodes=19`, som räknar till PostNords standardombud för postnumret.
+   - `startTime` är nuvarande tid i Sverige, och `serviceGroup=SE`, `originPostCode=39365`, `originCountryCode=SE` och `destinationCountryCode=SE`.
+   - Finns kundens gatuadress, till exempel "Storgatan 5", delas den upp i `destinationStreetName` och `destinationStreetNumber`, eftersom dokumentationen ber om det. Annars skickas bara postnumret.
 3. **Zod-schemat**, byggt på de riktiga svaren:
 
-    ```ts
-    const PostNordTransitTimeResponseSchema = z.array(z.unknown())
+   ```ts
+   const PostNordTransitTimeResponseSchema = z.array(z.unknown())
 
-    const PostNordTransitTimeRowSchema = z.object({
-      timeOfArrival: z.string().regex(/^\d{4}-\d{2}-\d{2}T/),
-      serviceInformation: z.object({
-        serviceCode: z.string(),
-        additionalServices: z.array(z.unknown()).optional(),
-      }),
-    })
-    ```
+   const PostNordTransitTimeRowSchema = z.object({
+     timeOfArrival: z.string().regex(/^\d{4}-\d{2}-\d{2}T/),
+     serviceInformation: z.object({
+       serviceCode: z.string(),
+       additionalServices: z.array(z.unknown()).optional(),
+     }),
+   })
+   ```
 
-    Först kontrolleras att svaret är en lista. Sedan kontrolleras varje rad för sig. Rader med `errorMessage` klarar inte schemat och hoppas över. Av de rader som är kvar används grundtjänsten, alltså raden med rätt `serviceCode` och utan `additionalServices`. Finns ingen sådan rad kastar adaptern ett fel, och kassan visar då ingen leveranstid.
+   Först kontrolleras att svaret är en lista. Sedan kontrolleras varje rad för sig. Rader med `errorMessage` klarar inte schemat och hoppas över. Av de rader som är kvar används grundtjänsten, alltså raden med rätt `serviceCode` och utan `additionalServices`. Finns ingen sådan rad kastar adaptern ett fel, och kassan visar då ingen leveranstid.
+
 4. **Svaret till butiken** är som förut `{ date: 'YYYY-MM-DD' }`, taget från `timeOfArrival`.
 
 Säg till om förslaget ser rätt ut, så gör jag ändringarna och testar dem mot sandlådan.
@@ -696,6 +697,7 @@ Säg till om förslaget ser rätt ut, så gör jag ändringarna och testar dem m
 > **1. Förbättra Zod-valideringen**
 >
 > Jag vill att vi skiljer mellan:
+>
 > - Ett giltigt svar med beräknad leveranstid.
 > - Ett giltigt svar där leverans inte stöds.
 > - Ett felmeddelande från PostNord.
@@ -720,6 +722,7 @@ Säg till om förslaget ser rätt ut, så gör jag ändringarna och testar dem m
 > Implementera en enkel funktion som beräknar nästa möjliga överlämningstid utifrån svenska vardagar och en konfigurerbar bryttid.
 >
 > Utgå tills vidare från:
+>
 > - Beställning före kl. 12.00 på vardagar: överlämning samma dag kl. 14.00.
 > - Beställning efter kl. 12.00: nästa vardag kl. 14.00.
 > - Beställning under helgen: måndag kl. 14.00.
@@ -749,6 +752,7 @@ Säg till om förslaget ser rätt ut, så gör jag ändringarna och testar dem m
 > **6. Val av leveranstid**
 >
 > Använd rätt tjänst och destination:
+>
 > - Hemleverans: serviceCode 17.
 > - Ombud och paketbox: serviceCode 19.
 > - När kunden valt ett specifikt ombud ska leveranstiden beräknas till just det ombudet.
@@ -760,6 +764,7 @@ Säg till om förslaget ser rätt ut, så gör jag ändringarna och testar dem m
 > **7. Tester**
 >
 > Jag vill att du testar:
+>
 > - Giltig leveranstid för hemleverans.
 > - Giltig leveranstid för ombud.
 > - Giltig leveranstid för paketbox.
@@ -819,13 +824,13 @@ Ett terminalkommando med tre anrop mot `v1` i sandlådan: ett postnummer som int
 - `DeliveryRequest`: `fromPostalCode`, `toPostalCode`, `handoverTime`, `delivery` (`'home'` eller `'servicePoint'`) och ett valfritt `servicePointId`. Ingen gatuadress.
 - `estimateDelivery` kastar inte längre fel utan returnerar ett av fyra utfall:
 
-    ```ts
-    export type DeliveryEstimateResult =
-      | { status: 'estimate'; date: string }
-      | { status: 'notSupported'; reason: string }
-      | { status: 'carrierError'; reason: string }
-      | { status: 'invalidResponse'; reason: string }
-    ```
+  ```ts
+  export type DeliveryEstimateResult =
+    | { status: 'estimate'; date: string }
+    | { status: 'notSupported'; reason: string }
+    | { status: 'carrierError'; reason: string }
+    | { status: 'invalidResponse'; reason: string }
+  ```
 
 - `estimate`: giltigt svar med leveranstid.
 - `notSupported`: giltigt svar där PostNord förklarar på en rad att leveransen inte går, till exempel "is not offered from postal code" eller "location not found". Det är också så ett ogiltigt ombuds-id och "200 med fel" landar.
@@ -951,9 +956,7 @@ Godkänner du justeringarna? Då börjar jag med steg C och visar filen innan ja
 > Jag godkänner justeringarna och att du börjar med nästa steg
 >
 > 1. `notSupported` ska bara användas när den efterfrågade grundtjänsten saknas. Om ett tillägg inte erbjuds men grundtjänsten fungerar ska vi fortfarande kunna visa leveranstiden.
->
 > 2. `rejected` behöver kunna skilja ogiltiga postnummer från andra avvisade anrop. Ett verifierat ogiltigt postnummer ska ge ett tydligt valideringsfel i kassan, inte behandlas som ett tillfälligt driftstopp. Vi ska fortfarande tillåta köp vid tekniska fel hos PostNord.
->
 > 3. Lägg till ett test exakt vid bryttiden kl. 12.00, utöver testerna före och efter. Säkerställ också att tidsberäkningen fungerar korrekt vid övergång mellan sommartid och vintertid.
 >
 > I övrigt är jag nöjd med planen.
@@ -983,20 +986,20 @@ Ny fil `server/lib/handoverTime.ts` med `nextHandoverTime(now)`:
 
 Typkontrollen gick igenom, och alla tolv gav rätt svar. Tiderna nedan är svensk tid:
 
-| Beställning | Överlämning |
-|---|---|
-| mån 2 nov 11.59 (vintertid) | mån 2 nov 14.00 |
-| mån 2 nov 12.00, exakt bryttid | tis 3 nov 14.00 |
-| mån 2 nov 12.01 | tis 3 nov 14.00 |
-| fre 30 okt 12.30 | mån 2 nov 14.00 |
-| lör 31 okt 10.00 | mån 2 nov 14.00 |
-| sön 1 nov 23.30 | mån 2 nov 14.00 |
-| fre 23 okt 11.59 (sommartid) | fre 23 okt 14.00 |
-| fre 23 okt 12.00, helgen då vintertid börjar | mån 26 okt 14.00 |
-| sön 25 okt 02.30, direkt efter bytet | mån 26 okt 14.00 |
+| Beställning                                   | Överlämning       |
+| --------------------------------------------- | ----------------- |
+| mån 2 nov 11.59 (vintertid)                   | mån 2 nov 14.00   |
+| mån 2 nov 12.00, exakt bryttid                | tis 3 nov 14.00   |
+| mån 2 nov 12.01                               | tis 3 nov 14.00   |
+| fre 30 okt 12.30                              | mån 2 nov 14.00   |
+| lör 31 okt 10.00                              | mån 2 nov 14.00   |
+| sön 1 nov 23.30                               | mån 2 nov 14.00   |
+| fre 23 okt 11.59 (sommartid)                  | fre 23 okt 14.00  |
+| fre 23 okt 12.00, helgen då vintertid börjar  | mån 26 okt 14.00  |
+| sön 25 okt 02.30, direkt efter bytet          | mån 26 okt 14.00  |
 | fre 27 mars 12.00, helgen då sommartid börjar | mån 30 mars 14.00 |
-| mån 30 mars 11.59 (sommartid) | mån 30 mars 14.00 |
-| mån 30 mars 12.00 (sommartid) | tis 31 mars 14.00 |
+| mån 30 mars 11.59 (sommartid)                 | mån 30 mars 14.00 |
+| mån 30 mars 12.00 (sommartid)                 | tis 31 mars 14.00 |
 
 Raderna med exakt 12.00 på sommartid visar att bryttiden följer svensk tid: 12.00 sommartid är 10.00 i UTC, och då räknas beställningen redan som efter bryttiden.
 
@@ -1053,15 +1056,15 @@ Godkänner du steg D?
 
 - **`ServicePointsResult`** har fått utfallet `noServicePoints`: PostNord svarade som det ska, men listan var tom. `invalidPostalCode` används bara när PostNord uttryckligen säger att postnumret inte finns, och det står i en kommentar ovanför typen. Jag lade också till `rejected`, för andra avvisade anrop, så att ombudssökningen har samma utfall som leveranstiden.
 
-    ```ts
-    export type ServicePointsResult =
-      | { status: 'found'; servicePoints: ServicePoint[] }
-      | { status: 'noServicePoints'; reason: string }
-      | { status: 'invalidPostalCode'; reason: string }
-      | { status: 'rejected'; reason: string }
-      | { status: 'unavailable'; reason: string }
-      | { status: 'invalidResponse'; reason: string }
-    ```
+  ```ts
+  export type ServicePointsResult =
+    | { status: 'found'; servicePoints: ServicePoint[] }
+    | { status: 'noServicePoints'; reason: string }
+    | { status: 'invalidPostalCode'; reason: string }
+    | { status: 'rejected'; reason: string }
+    | { status: 'unavailable'; reason: string }
+    | { status: 'invalidResponse'; reason: string }
+  ```
 
 - **`DeliveryRequest`** och **`DeliveryEstimateResult`** ser ut som i förra svaret, med de sju utfallen.
 - **`ShippingCarrier`**: `findServicePoints(postalCode)` returnerar `ServicePointsResult`, och `estimateDelivery(request)` returnerar `DeliveryEstimateResult`. Ingen av dem kastar fel längre.
@@ -1117,14 +1120,17 @@ import { join } from 'node:path'
 // Nyckeln läses från miljön som node --env-file laddar. Den skrivs aldrig ut och sparas aldrig.
 const apiKey = process.env.POSTNORD_API_KEY ?? ''
 const baseUrl = process.env.POSTNORD_API_URL ?? ''
-if (!apiKey || !baseUrl) throw new Error('POSTNORD_API_KEY eller POSTNORD_API_URL saknas')
+if (!apiKey || !baseUrl)
+  throw new Error('POSTNORD_API_KEY eller POSTNORD_API_URL saknas')
 const mask = (text: string) => text.replaceAll(apiKey, '***')
 
 const outDir = join(import.meta.dirname, 'stepE')
 mkdirSync(outDir, { recursive: true })
 
 async function probe(file: string, label: string, typeId: string) {
-  const url = new URL(`${baseUrl}/rest/businesslocation/v5/servicepoints/nearest/byaddress`)
+  const url = new URL(
+    `${baseUrl}/rest/businesslocation/v5/servicepoints/nearest/byaddress`,
+  )
   url.searchParams.set('returnType', 'json')
   url.searchParams.set('countryCode', 'SE')
   url.searchParams.set('postalCode', '00000')
@@ -1132,31 +1138,55 @@ async function probe(file: string, label: string, typeId: string) {
   url.searchParams.set('context', 'optionalservicepoint')
   url.searchParams.set('typeId', typeId)
   // Parametrarna skrivs ut innan nyckeln läggs till
-  console.log(`\n### ${label}\nnearest/byaddress?${url.searchParams.toString()}`)
+  console.log(
+    `\n### ${label}\nnearest/byaddress?${url.searchParams.toString()}`,
+  )
   url.searchParams.set('apikey', apiKey)
 
   let saved: unknown
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(15_000) })
     const body = mask(await res.text())
-    console.log(`${res.status} ${res.statusText}, ${res.headers.get('content-type')}`)
+    console.log(
+      `${res.status} ${res.statusText}, ${res.headers.get('content-type')}`,
+    )
     console.log(body.slice(0, 1500))
-    saved = { status: res.status, contentType: res.headers.get('content-type'), body }
+    saved = {
+      status: res.status,
+      contentType: res.headers.get('content-type'),
+      body,
+    }
   } catch (error) {
-    const message = mask(error instanceof Error ? `${error.name}: ${error.message}` : String(error))
+    const message = mask(
+      error instanceof Error
+        ? `${error.name}: ${error.message}`
+        : String(error),
+    )
     console.log(`Fel: ${message}`)
     saved = { error: message }
   }
   writeFileSync(join(outDir, file), JSON.stringify(saved, null, 2))
 }
 
-await probe('1-ombud-00000.json', '1. Ombud, postnummer som inte finns (00000)', '24,25,54')
-await probe('2-paketbox-00000.json', '2. Paketbox, postnummer som inte finns (00000)', '2')
+await probe(
+  '1-ombud-00000.json',
+  '1. Ombud, postnummer som inte finns (00000)',
+  '24,25,54',
+)
+await probe(
+  '2-paketbox-00000.json',
+  '2. Paketbox, postnummer som inte finns (00000)',
+  '2',
+)
 
 // Kontroll: nyckeln får inte finnas i någon sparad fil
-const leaked = readdirSync(outDir).filter((file) => readFileSync(join(outDir, file), 'utf8').includes(apiKey))
+const leaked = readdirSync(outDir).filter((file) =>
+  readFileSync(join(outDir, file), 'utf8').includes(apiKey),
+)
 console.log(`\nSparade svar i ${outDir}`)
-console.log(`Nyckeln i sparade svar: ${leaked.length === 0 ? 'nej' : `JA, i ${leaked.join(', ')}`}`)
+console.log(
+  `Nyckeln i sparade svar: ${leaked.length === 0 ? 'nej' : `JA, i ${leaked.join(', ')}`}`,
+)
 ```
 
 **Miljövariabler**
@@ -1274,6 +1304,7 @@ Ska jag skriva steg E med den här rekommendationen?
 > Tekniska fel som timeout och HTTP 5xx ska däremot fortfarande använda vår tidigare fallback.
 >
 > I övrigt:
+>
 > - Behåll fungerande ombud vid partiella fel.
 > - Undvik dubbletter i `unavailableKinds`.
 > - Behåll maskering av API-nyckeln.
@@ -1422,16 +1453,16 @@ Testerna täcker:
 
 Testerna använder bara låtsade svar, så jag körde också den omskrivna adaptern mot sandlådan, med ett skript utanför repot och bara `.env.postnord` laddad. Överlämningen blev fredag 30 oktober kl. 14.00, eftersom körningen gjordes före kl. 12.
 
-| Anrop | Utfall | Detalj |
-|---|---|---|
-| Ombudssökning 393 65 | `found` | 5 ombud, 5 paketboxar, inget saknas |
-| Ombudssökning 00000 | `invalidPostalCode` | API-400 Postalcode not found |
-| Hemleverans till 111 51 | `estimate` | 2026-11-02 |
-| Ombud till 111 51, inget valt | `estimate` | 2026-11-02 |
-| Ombud Ica Lindsdal (331366) | `estimate` | 2026-11-02 |
-| Paketbox Lassevägen (2696390) | `estimate` | 2026-11-02 |
-| Ogiltigt ombuds-id (999999999) | `invalidServicePoint` | location not found |
-| Hemleverans till 00000 | `invalidPostalCode` | API-009 Postal code '00000' does not exist |
+| Anrop                          | Utfall                | Detalj                                     |
+| ------------------------------ | --------------------- | ------------------------------------------ |
+| Ombudssökning 393 65           | `found`               | 5 ombud, 5 paketboxar, inget saknas        |
+| Ombudssökning 00000            | `invalidPostalCode`   | API-400 Postalcode not found               |
+| Hemleverans till 111 51        | `estimate`            | 2026-11-02                                 |
+| Ombud till 111 51, inget valt  | `estimate`            | 2026-11-02                                 |
+| Ombud Ica Lindsdal (331366)    | `estimate`            | 2026-11-02                                 |
+| Paketbox Lassevägen (2696390)  | `estimate`            | 2026-11-02                                 |
+| Ogiltigt ombuds-id (999999999) | `invalidServicePoint` | location not found                         |
+| Hemleverans till 00000         | `invalidPostalCode`   | API-009 Postal code '00000' does not exist |
 
 **Kvarstående problem och begränsningar**
 
@@ -1501,11 +1532,11 @@ Adaptern är klar och testad, men ingen route använder den än. Det som återst
 
 6. **Databasen:** tabellen `shipping_methods` med ombud (69 kr, fri frakt från 399 kr) och hemleverans (139 kr, fri frakt från 499 kr), startvärden i `db/seed.sql`, och en funktion som räknar fraktpriset utifrån varukorgen.
 7. **Route för kassan:** postnummer in, och fraktalternativ med pris, ombud och paketboxar och leveranstid ut. Utfallen blir kassans egna texter:
-    - Ogiltigt postnummer: fel under postnummerfältet.
-    - Ingen leveranstid: "Beräknad leveranstid är tillfälligt otillgänglig."
-    - Inga ombud: hemleverans i första hand.
-    - PostNord svarar inte: ombud som väljs i efterhand.
-    - Avvisat anrop: samma sak, med en text om att alternativet inte kunde kontrolleras, och ett integrationsfel i loggen.
+   - Ogiltigt postnummer: fel under postnummerfältet.
+   - Ingen leveranstid: "Beräknad leveranstid är tillfälligt otillgänglig."
+   - Inga ombud: hemleverans i första hand.
+   - PostNord svarar inte: ombud som väljs i efterhand.
+   - Avvisat anrop: samma sak, med en text om att alternativet inte kunde kontrolleras, och ett integrationsfel i loggen.
 8. **Kolumner på `orders`:** fraktalternativ, dess namn och pris, ombudets id, landskod och namn, och ombudsstatus ("Vald" eller "Väntar").
 9. **Ordern och Stripe:** servern kontrollerar valt ombud mot ombudssökningen, räknar priset, sparar allt på ordern och lägger frakten som en egen rad i Stripe.
 10. **Kassan i React:** fraktval, en egen ombudsväljare med grupperna ombud och paketbox, öppettider och "Visa på karta", leveranstiden som uppskattning, och "Vi skickar bara inom Sverige".
@@ -1586,17 +1617,33 @@ Bra. Här är förslaget för steg 7. Ingen kod är skriven än.
 3. Samtidigt hämtas fraktalternativen ur databasen, ombud och paketboxar, och leveranstiden för hemleverans (17) och för ombud till postnumret (19).
 4. Svaret:
 
-    ```json
-    {
-      "options": [
-        { "code": "ombud", "name": "Ombud eller paketbox", "price": 69, "regularPrice": 69, "freeFrom": 399, "amountToFreeShipping": 90, "estimatedDelivery": "2026-11-02" },
-        { "code": "hem", "name": "Hemleverans", "price": 139, "regularPrice": 139, "freeFrom": 499, "amountToFreeShipping": 190, "estimatedDelivery": null }
-      ],
-      "servicePoints": [],
-      "servicePointStatus": "found",
-      "unavailableKinds": []
-    }
-    ```
+   ```json
+   {
+     "options": [
+       {
+         "code": "ombud",
+         "name": "Ombud eller paketbox",
+         "price": 69,
+         "regularPrice": 69,
+         "freeFrom": 399,
+         "amountToFreeShipping": 90,
+         "estimatedDelivery": "2026-11-02"
+       },
+       {
+         "code": "hem",
+         "name": "Hemleverans",
+         "price": 139,
+         "regularPrice": 139,
+         "freeFrom": 499,
+         "amountToFreeShipping": 190,
+         "estimatedDelivery": null
+       }
+     ],
+     "servicePoints": [],
+     "servicePointStatus": "found",
+     "unavailableKinds": []
+   }
+   ```
 
 `servicePoints` är ombud och paketboxar i butikens format. `servicePointStatus` styr kassan:
 
@@ -1737,7 +1784,6 @@ Godkänner du kolumnerna och förslaget om `total_amount`? Då lägger jag in ra
 > Jag vill dock ha två justeringar:
 >
 > 1. Gör databasens CHECK-regel något striktare. Vid hemleverans ska samtliga ombudsfält vara NULL, inte bara status och ID. När ett ombud har status `Vald` ska både ombuds-ID och landskod finnas.
->
 > 2. Kontrollera hur `db/schema.sql` är uppbyggd så att vi inte blandar ihop det fullständiga schemat med migrationskommandon. Jag vill ha tydliga SQL-kommandon som jag kan köra i Supabase SQL Editor utan att påverka befintliga ordrar.
 >
 > Behåll bakåtkompatibiliteten med gamla ordrar.
@@ -1769,10 +1815,10 @@ Lösningen är att hålla isär de två:
 
 1. **`orders_shipping_check`:** fraktsätt, namn och pris finns antingen alla tre eller inga. Den lade jag till, så att en ny order inte kan sakna fraktpris.
 2. **`orders_service_point_check`,** striktare enligt din justering:
-    - Gamla ordrar och hemleverans: alla sju ombudsfält är tomma, även status.
-    - Ombud med "Väntar": alla sex fält för själva ombudet är tomma, eftersom ombudet väljs i efterhand.
-    - Ombud med "Vald": både ombudets id och landskoden krävs.
-    - Ombud utan status: nekas.
+   - Gamla ordrar och hemleverans: alla sju ombudsfält är tomma, även status.
+   - Ombud med "Väntar": alla sex fält för själva ombudet är tomma, eftersom ombudet väljs i efterhand.
+   - Ombud med "Vald": både ombudets id och landskoden krävs.
+   - Ombud utan status: nekas.
 
 Reglerna räknar ifyllda fält med `num_nonnulls`, en inbyggd funktion i Postgres, så att listan med fält inte behöver skrivas som långa rader med `AND ... IS NULL`.
 
@@ -1785,13 +1831,13 @@ Alla nya kolumner får vara tomma, och båda reglerna godkänner en order där a
 1. Öppna `db/migrations/2026-10-30-orders-shipping.sql`, kopiera allt och kör det i SQL Editor i Supabase.
 2. Kontrollera efteråt:
 
-    ```sql
-    SELECT count(*) AS ordrar, count(shipping_method) AS med_frakt FROM orders;
-    SELECT conname FROM pg_constraint
-    WHERE conrelid = 'orders'::regclass AND conname IN ('orders_shipping_check', 'orders_service_point_check');
-    ```
+   ```sql
+   SELECT count(*) AS ordrar, count(shipping_method) AS med_frakt FROM orders;
+   SELECT conname FROM pg_constraint
+   WHERE conrelid = 'orders'::regclass AND conname IN ('orders_shipping_check', 'orders_service_point_check');
+   ```
 
-    `med_frakt` ska vara 0, och båda reglerna ska synas.
+   `med_frakt` ska vara 0, och båda reglerna ska synas.
 
 **Valfritt innan du kör**
 
@@ -1816,17 +1862,18 @@ Då är databasen klar för frakt på ordern. Här är förslaget för steg 9. I
 1. Kontrollerar alla fält med Zod, som i dag.
 2. **Kontrollerar ombudet mot PostNord innan ordern skapas,** så att inget anrop till PostNord görs medan databastransaktionen är öppen:
 
-    | Ombudssökningen ger | Med valt ombud | Utan valt ombud |
-    |---|---|---|
-    | `found`, ombudet finns i listan | "Vald", ombudet sparas | |
-    | `found`, ombudet saknas, alla grupper svarade | 400: "Det valda ombudet finns inte för ditt postnummer. Välj ett annat." | 400: "Välj ett ombud eller en paketbox." |
-    | `found`, ombudet saknas, en grupp svarade inte | "Väntar", eftersom valet inte gick att kontrollera | 400: "Välj ett ombud eller en paketbox." |
-    | `noServicePoints` | 400, samma text som när ombudet saknas | "Väntar" |
-    | `unavailable` | "Väntar", varning i loggen | "Väntar" |
-    | `rejected`, `invalidResponse` | "Väntar", integrationsfel i loggen | "Väntar" |
-    | `invalidPostalCode` | 400 under postnummerfältet | 400 under postnummerfältet |
+   | Ombudssökningen ger                            | Med valt ombud                                                           | Utan valt ombud                          |
+   | ---------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------- |
+   | `found`, ombudet finns i listan                | "Vald", ombudet sparas                                                   |                                          |
+   | `found`, ombudet saknas, alla grupper svarade  | 400: "Det valda ombudet finns inte för ditt postnummer. Välj ett annat." | 400: "Välj ett ombud eller en paketbox." |
+   | `found`, ombudet saknas, en grupp svarade inte | "Väntar", eftersom valet inte gick att kontrollera                       | 400: "Välj ett ombud eller en paketbox." |
+   | `noServicePoints`                              | 400, samma text som när ombudet saknas                                   | "Väntar"                                 |
+   | `unavailable`                                  | "Väntar", varning i loggen                                               | "Väntar"                                 |
+   | `rejected`, `invalidResponse`                  | "Väntar", integrationsfel i loggen                                       | "Väntar"                                 |
+   | `invalidPostalCode`                            | 400 under postnummerfältet                                               | 400 under postnummerfältet               |
 
-    Vid hemleverans görs ingen ombudssökning. Servern frågar i stället om leveranstiden för hemleverans, men bara för att kontrollera postnumret: säger PostNord att det inte finns blir det 400 under postnummerfältet. Svarar PostNord inte går köpet igenom.
+   Vid hemleverans görs ingen ombudssökning. Servern frågar i stället om leveranstiden för hemleverans, men bara för att kontrollera postnumret: säger PostNord att det inte finns blir det 400 under postnummerfältet. Svarar PostNord inte går köpet igenom.
+
 3. I transaktionen, som i dag: läser varukorgen, kontrollerar lagret och räknar varornas summa med priserna i databasen.
 4. Räknar fraktpriset med `calculateShipping` utifrån tabellen och varornas summa.
 5. Sparar ordern med `total_amount` = varor + frakt, och alla fraktfält som en ögonblicksbild.
@@ -2002,7 +2049,7 @@ Säg till vad du ser, så går vi vidare till steg 11, admin och tacksidan.
 
 ## Prompt 36 (30 okt 2026)
 
-> *(Skärmdump av Stripes betalformulär: Chilisalsa Rökig, mängd 6, 69,00 kr styck, totalt 414,00 kr, ingen fraktrad.)*
+> _(Skärmdump av Stripes betalformulär: Chilisalsa Rökig, mängd 6, 69,00 kr styck, totalt 414,00 kr, ingen fraktrad.)_
 >
 > Allt funkar men stripe visar bara summan, ingen egen rad för frakt, eller ja, frakten var ju gratis här
 
@@ -2025,7 +2072,7 @@ Källor:
 
 ## Prompt 37 (30 okt 2026)
 
-> *(Skärmdump av Stripes betalformulär: Chilisalsa Rökig, mängd 4, 69,00 kr styck, 276,00 kr. Frakt: Ombud eller paketbox, mängd 1, 69,00 kr. Totalt 345,00 kr.)*
+> _(Skärmdump av Stripes betalformulär: Chilisalsa Rökig, mängd 4, 69,00 kr styck, 276,00 kr. Frakt: Ombud eller paketbox, mängd 1, 69,00 kr. Totalt 345,00 kr.)_
 >
 > Se bilden.
 
@@ -2057,9 +2104,9 @@ Här är förslaget för steg 11. Ingen kod är ändrad.
 
 - `GET /api/orders/session/:sessionId` skickar också fraktsätt, fraktpris, ombudsstatus och ombudets namn och adress.
 - Tacksidan visar en rad för frakten ("Fri frakt" eller priset), och under den:
-    - Vid "Vald": "Hämtas hos Ica Supermarket Lindsdal, Kanngjutarvägen 5, 39365 Kalmar".
-    - Vid "Väntar": "Vi väljer ett ombud nära din adress. Du får veta vilket när paketet skickas."
-    - Vid hemleverans: "Levereras till din adress".
+  - Vid "Vald": "Hämtas hos Ica Supermarket Lindsdal, Kanngjutarvägen 5, 39365 Kalmar".
+  - Vid "Väntar": "Vi väljer ett ombud nära din adress. Du får veta vilket när paketet skickas."
+  - Vid hemleverans: "Levereras till din adress".
 
 **Orderlistan i admin**
 
@@ -2073,11 +2120,11 @@ Här är förslaget för steg 11. Ingen kod är ändrad.
 - **`GET /api/admin/orders/:id/service-points`** (ny, bakom inloggningen): söker ombud för orderns postnummer.
 - **`PUT /api/admin/orders/:id/service-point`** (ny, bakom inloggningen): tar emot ombudets id, söker ombuden för postnumret igen och sparar bara om id:t finns i svaret. Då blir ordern "Vald" med en ögonblicksbild. Uppdateringen gäller bara ordrar som är "Väntar", så ett val som redan är gjort kan inte skrivas över av misstag.
 - Svaren till admin:
-    - PostNord svarar inte: 502, "PostNord svarar inte just nu. Försök igen senare." Ordern står kvar som "Väntar".
-    - Ombudet finns inte för postnumret: 400.
-    - PostNord säger att postnumret inte finns: 400, "Postnumret på ordern finns inte enligt PostNord. Kontakta kunden."
-    - Inga ombud finns: 400, "Det finns inga ombud för orderns postnummer."
-    - Avvisat anrop eller oväntat svar: 502, och ett integrationsfel i loggen.
+  - PostNord svarar inte: 502, "PostNord svarar inte just nu. Försök igen senare." Ordern står kvar som "Väntar".
+  - Ombudet finns inte för postnumret: 400.
+  - PostNord säger att postnumret inte finns: 400, "Postnumret på ordern finns inte enligt PostNord. Kontakta kunden."
+  - Inga ombud finns: 400, "Det finns inga ombud för orderns postnummer."
+  - Avvisat anrop eller oväntat svar: 502, och ett integrationsfel i loggen.
 
 **Filer**
 
@@ -2098,10 +2145,11 @@ Godkänner du steg 11?
 ## Prompt 39 (30 okt 2026)
 
 > Jag godkänner steg 11 med tre tillägg:
+>
 > 1. Granska behörighetskontrollen för GET /api/orders/session/:sessionId och säkerställ att orderuppgifter inte kan hämtas obehörigt. Behåll befintligt fungerande tacksidesflöde.
 > 2. Tilldelning av ombud via admin ska endast tillåtas för betalda, ej avbrutna eller återbetalda ordrar med ombudsstatus Väntar. Validera detta på servern.
 > 3. Gör databasuppdateringen atomär så att två samtidiga administratörer inte kan skriva över varandras ombudsval.
-> Implementera enligt planen, komplettera med tester och redovisa resultatet. Ändra inte andra funktioner i onödan.
+>    Implementera enligt planen, komplettera med tester och redovisa resultatet. Ändra inte andra funktioner i onödan.
 
 ### Svar
 
@@ -2159,13 +2207,14 @@ Kopplingen till kakan och den atomära uppdateringen kräver databasen och har b
 1. **Tacksidan:** gör ett testköp. Tacksidan ska visa fraktraden och var paketet hämtas. Kopiera adressen till ett inkognitofönster: där ska det stå "Vi hittade ingen order."
 2. **En order som väntar på ombud:** kör det här i SQL Editor på en betald testorder med ombud. Ersätt `ORDER_ID` med orderns nummer:
 
-    ```sql
-    UPDATE orders SET service_point_status = 'Väntar', service_point_id = NULL, service_point_country_code = NULL,
-      service_point_name = NULL, service_point_street = NULL, service_point_postal_code = NULL, service_point_city = NULL
-    WHERE id = ORDER_ID AND shipping_method = 'ombud';
-    ```
+   ```sql
+   UPDATE orders SET service_point_status = 'Väntar', service_point_id = NULL, service_point_country_code = NULL,
+     service_point_name = NULL, service_point_street = NULL, service_point_postal_code = NULL, service_point_city = NULL
+   WHERE id = ORDER_ID AND shipping_method = 'ombud';
+   ```
 
-    Orderlistan ska visa "Ombud saknas". Öppna ordern, tryck "Hämta ombud", välj ett och tryck "Spara ombud". Ordern ska bli "Vald" med ombudets adress.
+   Orderlistan ska visa "Ombud saknas". Öppna ordern, tryck "Hämta ombud", välj ett och tryck "Spara ombud". Ordern ska bli "Vald" med ombudets adress.
+
 3. **Två administratörer samtidigt:** gör punkt 2 igen, men öppna ordern i två flikar och tryck "Hämta ombud" i båda. Spara i den första och sedan i den andra. Den andra ska få "Ordern har ändrats under tiden ...", och den första fliken ska visa det första valet.
 4. **Obetald order:** en obetald order med "Väntar" ska inte märkas i listan, och ordern ska säga att ombud bara kan väljas för betalda ordrar.
 
@@ -2175,7 +2224,7 @@ Nästa steg är 12, adminsidan för fraktpriserna.
 
 ## Prompt 40 (30 okt 2026)
 
-> *(Skärmdump: webbläsaren på `localhost:5174/tack?session_id=cs_test_...` visar "Webbplatsen kan inte nås", `ERR_CONNECTION_REFUSED`.)*
+> _(Skärmdump: webbläsaren på `localhost:5174/tack?session_id=cs_test_...` visar "Webbplatsen kan inte nås", `ERR_CONNECTION_REFUSED`.)_
 >
 > Jag har stripe listen på men tacksidan visas inte, jag ser inga fel i konsolen och inga loggar i terminalen.
 
@@ -2318,30 +2367,140 @@ Bra. Då är adminsidan för fraktpriser provad.
 2. **Commit och push,** som du gör själv. Det är steg 7 till 12 och loggen.
 3. **Deploy:** du kör `npx vercel --prod` från projektmappen.
 4. **"Klart när" i den deployade butiken:**
-    1. Kassan visar fraktpris för ombud och hemleverans, beräknad leverans, och ombud och paketboxar nära postnumret.
-    2. Frakten blir 0 kr när varukorgen når gränsen, 399 kr för ombud.
-    3. Ett testköp: valt ombud och fraktpris syns på ordern i admin och på tacksidan.
-    4. Beloppet i Stripe är varor plus frakt.
-    5. Ett ombud som inte finns för postnumret avvisas med ett begripligt fel. Kassan visar bara giltiga ombud, så det prövas genom att skicka en order direkt i webbläsarens konsol på den deployade sidan:
+   1. Kassan visar fraktpris för ombud och hemleverans, beräknad leverans, och ombud och paketboxar nära postnumret.
+   2. Frakten blir 0 kr när varukorgen når gränsen, 399 kr för ombud.
+   3. Ett testköp: valt ombud och fraktpris syns på ordern i admin och på tacksidan.
+   4. Beloppet i Stripe är varor plus frakt.
+   5. Ett ombud som inte finns för postnumret avvisas med ett begripligt fel. Kassan visar bara giltiga ombud, så det prövas genom att skicka en order direkt i webbläsarens konsol på den deployade sidan:
 
-        ```js
-        fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            customer_name: 'Test', customer_email: 'test@example.com', customer_phone: '0701234567',
-            shipping_street: 'Testgatan 1', shipping_postal_code: '39365', shipping_city: 'Kalmar',
-            shipping_method: 'ombud', service_point_id: '999999999',
-          }),
-        }).then((res) => res.json()).then(console.log)
-        ```
+      ```js
+      fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_name: 'Test',
+          customer_email: 'test@example.com',
+          customer_phone: '0701234567',
+          shipping_street: 'Testgatan 1',
+          shipping_postal_code: '39365',
+          shipping_city: 'Kalmar',
+          shipping_method: 'ombud',
+          service_point_id: '999999999',
+        }),
+      })
+        .then((res) => res.json())
+        .then(console.log)
+      ```
 
-        Svaret ska vara `{ status: 'fel', field: 'service_point_id', error: 'Det valda ombudet finns inte för ditt postnummer. Välj ett annat.' }`. Ingen order skapas, eftersom ombudet kontrolleras innan ordern sparas.
-    6. Ingen PostNord-nyckel i webbläsaren: jag hämtar alla JavaScript-filer från den deployade butiken och söker efter nyckeln, med ett skript som bara laddar `.env.postnord` och aldrig skriver ut nyckeln. Skriptet söker också efter `atapi2.postnord` och `apikey`, som inte heller ska finnas i webbläsarens kod.
-    7. README:n om AI kommer i steg 14.
+      Svaret ska vara `{ status: 'fel', field: 'service_point_id', error: 'Det valda ombudet finns inte för ditt postnummer. Välj ett annat.' }`. Ingen order skapas, eftersom ombudet kontrolleras innan ordern sparas.
+
+   6. Ingen PostNord-nyckel i webbläsaren: jag hämtar alla JavaScript-filer från den deployade butiken och söker efter nyckeln, med ett skript som bara laddar `.env.postnord` och aldrig skriver ut nyckeln. Skriptet söker också efter `atapi2.postnord` och `apikey`, som inte heller ska finnas i webbläsarens kod.
+   7. README:n om AI kommer i steg 14.
 
 Får jag börja med punkt 1, bygget? Kommandot är:
 
 ```
 cd "D:/Fullstack developer/6. Systemutveckling/fsu25d-systemutveckling-uppgift-1-min-egna-e-handel-csschef" && npm run build
 ```
+
+---
+
+## Prompt 45 (30 okt 2026)
+
+> Jag kör bygget och deploy till vercel, comittat och pushat. Allt klart. Vi kör steg 4
+
+### Svar
+
+Jag körde de kontroller som inte kräver webbläsaren, med ett skript utanför repot mot `https://chili-ehandel.vercel.app`. Skriptet laddade bara `.env.postnord` och skrev aldrig ut nyckeln.
+
+**Resultat**
+
+1. **`GET /api/shipping/options?postalCode=39365`:** 200, med "Ombud eller paketbox" 69 kr (fri frakt från 399 kr) och "Hemleverans" 139 kr (fri frakt från 499 kr). Men `servicePointStatus` är `unverified`, inga ombud eller paketboxar, och ingen leveranstid.
+2. **`GET /api/shipping/options?postalCode=00000`:** samma sak, `unverified`, i stället för "Postnumret finns inte".
+3. **`POST /api/orders` med ombud 999999999:** 400 "Varukorgen är tom". Ombudet kunde inte kontrolleras, så servern gick vidare till varukorgen, som var tom eftersom skriptet inte har någon. Ingen order skapades.
+4. **Nyckeln i webbläsarens kod:** butiken har en enda JavaScript-fil, och där finns varken nyckeln, `atapi2.postnord`, `apikey` eller `POSTNORD_`. Den punkten i "Klart när" är uppfylld.
+
+**Vad det betyder**
+
+`unverified` betyder att PostNord avvisade anropet (en felkod i 400-serien) eller svarade i en form vi inte känner igen. Det händer här för alla anrop, även för 00000, alltså innan PostNord ens tittar på postnumret. Lokalt fungerar samma kod. Felet ligger därför troligen i hur nycklarna ser ut på Vercel, inte i koden. Saknades de helt hade utfallet blivit `manual`.
+
+Det betyder också att reservlösningen fungerar i produktion: kunden kan beställa, och kassan säger att leveransalternativet inte kunde kontrolleras.
+
+**Så hittar vi felet**
+
+Servern loggar exakt vad PostNord svarade, med nyckeln maskerad. Öppna projektet i Vercel, gå till Logs och sök på "Integrationsfel mot PostNord". Raden visar statuskoden och PostNords förklaring.
+
+Det vanligaste felet är hur värdena är inklistrade. Kontrollera på Vercel att:
+
+- `POSTNORD_API_URL` är exakt `https://atapi2.postnord.com`, utan snedstreck på slutet och utan `/rest`.
+- `POSTNORD_API_KEY` är sandlådenyckeln, 32 tecken, utan mellanslag, citattecken eller radbrytning.
+- Båda ligger under Production.
+
+En ändring på Vercel gäller först efter en ny deploy.
+
+Klistra gärna in loggraden här. Nyckeln är maskerad i den.
+
+---
+
+## Prompt 46 (30 okt 2026)
+
+> Jag hittade felet tror jag, testa igen
+
+### Svar
+
+Samma kontroll mot den deployade butiken, med samma skript:
+
+1. **`GET /api/shipping/options?postalCode=39365`:** 200. `servicePointStatus` är `found`, med 5 ombud och 5 paketboxar, närmast Ica Supermarket Lindsdal, Kanngjutarvägen 5. Ombud 69 kr och hemleverans 139 kr, båda med beräknad leverans tisdag 3 november. Det stämmer: överlämningen blir måndag kl. 14, eftersom kontrollen gjordes efter kl. 12 på en fredag.
+2. **`GET /api/shipping/options?postalCode=00000`:** 400 med "Postnumret finns inte. Kontrollera det." under postnummerfältet.
+3. **`POST /api/orders` med ombud 999999999:** 400 med "Det valda ombudet finns inte för ditt postnummer. Välj ett annat." Ombudet kontrolleras innan ordern sparas, så ingen order skapades.
+4. **Nyckeln i webbläsarens kod:** fortfarande inga träffar.
+
+**"Klart när" i den deployade butiken**
+
+- Kassan visar fraktpris för ombud och hemleverans, beräknad leverans och ombud nära kundens postnummer: uppfyllt.
+- Ett ombud som inte finns för postnumret avvisas med ett begripligt fel: uppfyllt.
+- Ingen PostNord-nyckel i webbläsaren: uppfyllt.
+- Kvar att visa i webbläsaren: att frakten blir 0 kr vid gränsen, att valt ombud och fraktpris syns på ordern, och att beloppet i Stripe är varor plus frakt. Gör ett testköp med en varukorg under 399 kr och välj ett ombud, och lägg sedan varor för minst 399 kr i varukorgen och kontrollera att ombud visar "Fri frakt".
+- README om AI: steg 14.
+
+Vad var felet? Det är bra att få med i README:n under felsökning, och som ett exempel på varför `rejected` loggas som ett integrationsfel.
+
+---
+
+## Prompt 47 (30 okt 2026)
+
+> 1 och 2 verifierade. Det fattades troligtvis ett tecken i api nyckeln på vercel, jag uppdaterade den och därefter fungerade det.
+
+### Svar
+
+Då är alla punkter i "Klart när" som gäller butiken visade i den deployade butiken:
+
+- Kassan visar fraktpris för ombud och hemleverans, beräknad leverans och ombud nära postnumret.
+- Frakten blir 0 kr när ordervärdet når gränsen.
+- Valt ombud och fraktpris syns på ordern.
+- Beloppet i Stripe är varor plus frakt.
+- Ett ombud som inte finns för postnumret avvisas med ett begripligt fel.
+- Ingen PostNord-nyckel finns i webbläsaren.
+
+Kvar är README:n.
+
+Felet med nyckeln är ett bra exempel för redovisningen. En nyckel som saknar ett tecken ger en felkod i 400-serien från PostNord. Det blev `rejected`, alltså "Integrationsfel mot PostNord" i loggen, inte "PostNord svarar inte". Kassan föll tillbaka på manuell hantering och sa att leveransalternativet inte kunde kontrolleras, och köpet gick fortfarande att genomföra.
+
+**Förslag för steg 14: README**
+
+README:n är skriven i jag-form, och integrationerna har ett avsnitt var med "Val jag har gjort". Förslaget följer samma stil.
+
+1. **"Frakt med PostNord"** under Integrationer: vad kunden ser i kassan, gränssnittet för transportbolag och adaptern, priserna i databasen och hur gränserna för fri frakt räknades fram, att priset räknas på servern och blir en egen rad i Stripe, att ombudet kontrolleras på servern, "Väntar" när PostNord inte svarar, valet av ombud i efterhand i admin, och adminsidan för fraktpriser. Sist "Val jag har gjort".
+2. **"Så använde jag AI i labb 5"**, det avsnitt labben kräver, kort:
+    - Verktyg: Claude Code i VS Code. Svaren kontrollerades också mot en annan AI.
+    - Hur nycklarna skyddades: `.env` blockerad i verktyget, varje kommando godkänt för hand, och testskript som bara laddar `.env.postnord`.
+    - Vilka prompter: de viktigaste i korthet, och en länk till hela loggen, `docs/ai-logg-labb5.md`.
+    - Vad AI:n föreslog, vad som skilde sig från PostNords dokumentation och hur det löstes: de viktigaste punkterna, och en länk till `docs/postnord-avvikelser.md`.
+    - Hur testerna hittade fel: 9 av 56 tester fallerade först, sedan rättades koden.
+3. **Kom igång:** PostNord under Konton (Customer plan och nyckel för sandlådan), `npm test`, mappen `db/migrations/`, och hur frakten testas lokalt.
+4. **Kommandon:** `npm test`.
+5. **Databas:** att `db/schema.sql` beskriver hela strukturen för en ny databas, och att `db/migrations/` innehåller ändringar som körs en gång mot en befintlig databas.
+6. **Deploy:** PostNords två variabler på Vercel.
+7. **Om något strular:** "Kassan säger att leveransalternativet inte kunde kontrolleras". Sök efter "Integrationsfel mot PostNord" i loggen på Vercel. Hos mig saknades ett tecken i nyckeln.
+
+Ska jag skriva ett utkast i din stil, som du sedan läser igenom och ändrar, eller vill du skriva någon del själv?
