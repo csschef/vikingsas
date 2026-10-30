@@ -172,34 +172,51 @@ Val jag har gjort:
 
 ### Så använde jag AI i labb 5
 
-Labb 5 var en AI-labb. AI skrev koden, och jag kontrollerade den mot PostNords dokumentation och sandlåda. Jag använde Claude Code i VS Code, som kan läsa projektet. För att kontrollera Claude lät jag ChatGPT granska planen och koden, och tog med dess synpunkter som nya krav. Hela konversationen finns i [docs/ai-logg-labb5.md](docs/ai-logg-labb5.md), och skillnaderna mot PostNords dokumentation i [docs/postnord-avvikelser.md](docs/postnord-avvikelser.md).
+AI skrev koden för frakten, och jag kontrollerade den mot PostNords dokumentation och sandlåda. Verktyget var Claude Code i VS Code, och ChatGPT fick granska planen och koden. `.env` var blockerad för Claude, jag godkände varje kommando, och nyckeln klistrades aldrig in i en chatt. Alla prompter och svar finns i [docs/ai-logg-labb5.md](docs/ai-logg-labb5.md), och skillnaderna mot PostNords dokumentation i [docs/postnord-avvikelser.md](docs/postnord-avvikelser.md).
 
-**Nycklarna.** `.env` är blockerad för Claude i `.claude/settings.json`, och jag godkände varje filändring och varje terminalkommando innan det kördes. Testskripten mot sandlådan laddade bara `.env.postnord`, en egen fil med PostNords två variabler. Nyckeln har aldrig klistrats in i en chatt.
+- **Prompter:** sammanfatta labben och gör en plan, lägg priserna i databasen, räkna fram gränserna för fri frakt, hantera att PostNord inte svarar, ta med paketboxar, och ChatGPT:s krav på felhantering och tester.
+- **Vad AI:n föreslog:** en endpoint för leveranstid som gav 502, ett svar som antogs vara ett objekt, och `startTime` som tiden då kunden beställer.
+- **Vad som skilde sig:** rätt endpoints är `/transittime/addresstoaddress` och `/transittime/addresstolocation`, svaret är en lista där fel kommer som rader i ett 200 OK, och `startTime` är när PostNord får paketet. Dokumentationen hade också egna fel, till exempel en lista med ombudstyper som ger 400 för Sverige, och latitud och longitud som har bytt plats.
+- **Hur det löstes:** varje antagande prövades mot sandlådan innan koden skrevs om, och testerna skrevs innan de sista bristerna rättades. Första körningen gav 9 fel av 56, och alla rättades.
 
-**Prompterna i korthet**, ordagrant i loggen:
+## Reflektion
 
-- Läs labben i kursrepot, sammanfatta den och gör en gemensam plan. Adaptern ska göra det enkelt att byta transportbolag.
-- Fraktpriserna ska ligga i databasen, och gamla ordrar ska behålla sitt fraktpris.
-- Räkna fram gränserna för fri frakt utifrån butikens priser och PostNords priser, så att kunden oftast hamnar precis under gränsen.
-- Om PostNord inte svarar ska ordern skapas och ombudet väljas i efterhand i admin.
-- Jag vill ha med paketboxar.
-- Kontrollera mot den dokumenterade endpointen, gör inga antaganden om svarets struktur och ändra ingen kod förrän du visat vad som behöver ändras.
-- Granskningen från ChatGPT: skilj på olika sorters fel, räkna `startTime` från när paketet lämnas, håll leveranstid och ombudssökning oberoende, och testa med mockad `fetch`.
+### Integrationsmodeller
 
-**Vad AI:n föreslog, och vad som skilde sig**
+- **Leverantören: fil.** Katalogen hämtas som CSV eller XML och läses in i ett svep. Den är en hel lista som ändras sällan och importeras när admin vill, inget som behöver frågas om vid varje sidvisning.
+- **Algolia: REST via SDK.** `algoliasearch` gör REST-anropen åt mig på servern. En sökning är en fråga och ett svar, och SDK:t sköter adresser och format.
+- **Stripe: SDK och webhook.** Servern skapar betalningen med Stripes SDK, och kassan visar Stripes formulär inbäddat med Stripe.js i stället för en redirect. Webhooken säger när betalningen är klar. Det passar, eftersom betalningen blir klar hos Stripe i sin egen takt och inte medan kunden väntar på mitt API.
+- **Supabase Storage: SDK.** `supabase-js` på servern laddar upp och tar bort bilderna, som sedan visas direkt från bucketens publika adress.
+- **PostNord: REST.** Ombud och leveranstid hämtas med GET-anrop. Det finns inget SDK, och anropen är enkla frågor med ett postnummer.
+- **Frankfurter: REST.** Ett GET-anrop ger dagens kurser, som cachas i 300 sekunder.
 
-- Claudes första version av leveranstiden använde `/rest/transport/v1/transittime/getTransitTimeInformation.json`. Den gav 502. Dokumentationen anger `/transittime/addresstoaddress` och `/transittime/addresstolocation`, med andra parametrar.
-- Svaret antogs vara ett objekt. Det är en lista med en rad per variant av tjänsten, och fel kommer som rader i ett svar med 200 OK. Att kontrollera `response.ok` räcker alltså inte.
-- `startTime` sattes först till när kunden beställer. Det är när PostNord får paketet, så nu räknas den fram från bryttid och överlämningstid.
-- Ombudssökningen antogs ge bemannade ombud. Fyra av fem var paketboxar.
-- Claude flyttade nyckeln från adressen till ett huvud efter ett test. Det fungerade, men det står inte i dokumentationen, så den flyttades tillbaka och maskeras i stället.
-- PostNords dokumentation hade egna fel: listan med ombudstyper ger 400 för Sverige, latitud och longitud har bytt plats, exemplet för Address to Location pekar på fel endpoint, versionen står inte, gata och nummer står som obligatoriska men behövs inte, och exempel på svar saknas.
+### Varför via Express
 
-**Hur det kontrollerades och löstes**
+Nycklarna kan bara hållas hemliga på servern. Allt som skickas till webbläsaren går att läsa, så Stripes, Supabases och PostNords nycklar och Algolias skrivnyckel hade legat öppna. Servern kontrollerar också det kunden skickar. Pris och frakt räknas utifrån databasen och valt ombud kontrolleras mot PostNord, så ett ändrat pris i webbläsaren påverkar ingenting. Adaptrarna gör dessutom om svaren till butikens eget format, så React behöver inte ändras om en tjänst byts ut.
 
-- Varje antagande prövades mot sandlådan med skript utanför repot, och de riktiga svaren jämfördes med dokumentationen innan Zod-schemana skrevs.
-- Testerna skrevs innan de sista bristerna rättades. Första körningen gav 9 fel av 56: en bruten anslutning blev "oväntat svar", omöjliga datum som 30 februari blev leveranstider, och alla fel från `/addresstolocation` blev "ogiltigt ombud". Rättningen av datumen gav två nya fel, som också rättades. I dag finns 111 tester och alla går igenom.
-- I produktion visade kassan först inga ombud. Loggen sa "Integrationsfel mot PostNord", och det visade sig att ett tecken saknades i nyckeln på Vercel. Kunden kunde ändå handla under tiden.
+### Integrera eller bygga själv
+
+- **Import:** utan filerna hade jag fått skriva in 44 produkter för hand och hålla pris och lager uppdaterade själv.
+- **Sökning:** `ILIKE` hittar inget på "habanro", Algolia ger Habanero först. Att bygga det själv hade krävt en synonymordlista som måste underhållas.
+- **Betalning:** PCI DSS, avtal med en inlösande bank och 3D Secure. Det jag ger bort är avgiften, 1,5 % plus 1,80 kr per köp med vanliga EES-kort.
+- **Bilder:** Vercels funktioner kan inte spara filer permanent, så jag hade behövt en egen filserver med backup.
+- **Frakt:** PostNord ändrar sina ombud hela tiden och rekommenderar själva att listan uppdateras varje dag. Leveranstiderna bygger på deras egna rutter, det går inte att räkna fram själv.
+- **Valuta:** egna kurser hade krävt att hämta och uppdatera ECB:s data varje dag.
+
+### När en tjänst är nere
+
+Varje anrop har en timeout, så inget hänger kvar.
+
+- **Frankfurter:** valutaväljaren göms och allt visas i SEK.
+- **Leverantören:** importen ger ett felmeddelande och produkterna lämnas orörda.
+- **Algolia:** sökningen visar ett fel, men startsidan hämtar från databasen och fungerar. Admin sparar ändå och får en varning om att sökindexet inte är uppdaterat.
+- **Stripe:** kunden får ett begripligt fel, ordern blir Avbruten och varukorgen ligger kvar. Svarar mitt API fel på webhooken skickar Stripe den igen.
+- **Supabase Storage:** admin får ett fel och produkten behåller sin gamla bild, eftersom databasen ändras först när den nya bilden är uppladdad.
+- **PostNord:** kunden kan ändå handla. Ombudet väljs i efterhand i admin, och leveranstiden visas som tillfälligt otillgänglig. Det hände på riktigt i produktion när ett tecken saknades i nyckeln.
+
+### Risker med Stripe
+
+Stripe kan höja avgifterna, ändra villkoren eller stänga kontot, och då står butiken utan betalning tills en ny leverantör är inkopplad. Adaptern gör bytet mindre, men kassan och webhooken är byggda för Stripe. Stripe hanterar kundens namn, e-post och kort, så ett personuppgiftsbiträdesavtal krävs. Det ingår i användaravtalet, och svenska konton har avtalet med Stripes irländska bolag. Uppgifterna kan ändå föras till USA under EU:s och USA:s Data Privacy Framework. Det kan rivas upp, som Privacy Shield 2020, och därför har Stripe standardavtalsklausuler som reserv. Att Stripe är amerikanskt kan också sticka i ögonen på kunder som vill hålla sina uppgifter inom EU.
 
 ## Kom igång
 
@@ -209,7 +226,7 @@ Den deployade butiken ligger på https://chili-ehandel.vercel.app
 
 Alla är gratis, och bara testlägen används:
 
-- **Supabase** för databasen (Postgres)
+- **Supabase** för databasen (Postgres) och produktbilderna. Skapa en publik bucket i Storage, till exempel `product-images`, och skriv namnet i `SUPABASE_BUCKET`. Den hemliga nyckeln hamnar i `SUPABASE_SECRET_KEY`
 - **Algolia** för sökningen
 - **Stripe** i testläge, och [Stripe CLI](https://docs.stripe.com/stripe-cli) för att ta emot webhooks lokalt
 - **PostNord** för ombud och leveranstid. Skapa ett konto på [atdeveloper.postnord.com](https://atdeveloper.postnord.com), välj Customer plan och skapa en nyckel för sandlådan
@@ -269,6 +286,8 @@ stripe checkout sessions expire <cs_test_...>
 ```
 
 Sessionens id står i kolumnen `stripe_session_id` i `orders`.
+
+**Bilder.** Logga in i admin, öppna en produkt och välj en bild, JPEG, PNG eller WebP på högst 4 MB. Bilden visas i butiken från Supabase Storage. En PDF eller en större fil ger ett fel under fältet.
 
 **Frakt.** Lägg något i varukorgen, gå till kassan och skriv ett postnummer, till exempel 393 65. Sandlådan ger ombud och leveranstider med PostNords testdata. 00000 ger felet för ett postnummer som inte finns. Fraktpriserna ändras i admin under Frakt.
 
