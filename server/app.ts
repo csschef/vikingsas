@@ -10,6 +10,7 @@ import ordersRouter from './routes/orders.js'
 import currencyRouter from './routes/currency.js'
 import searchRouter from './routes/search.js'
 import shippingRouter from './routes/shipping.js'
+import authRouter from './routes/auth.js'
 import adminAuthRouter from './routes/adminAuth.js'
 import adminProductsRouter from './routes/adminProducts.js'
 import adminOrdersRouter from './routes/adminOrders.js'
@@ -23,6 +24,7 @@ import { requireAuth } from './middleware/requireAuth.js'
 declare module 'express-session' {
   interface SessionData {
     userId: number
+    customerId: number
   }
 }
 
@@ -30,6 +32,8 @@ declare module 'express-session' {
 // anropar Vercel den via api/index.ts.
 // Routes behöver /api-prefix eftersom Vercel skickar in hela sökvägen.
 const app = express()
+// Vercel tar emot https och skickar vidare till Express. Då blir req.secure sant bara när det var https.
+app.set('trust proxy', 1)
 // Webhooken behöver Stripes råa bytes, därför ligger den före express.json()
 app.use('/api/stripe/webhook', stripeWebhookRouter)
 app.use(cookieParser())
@@ -40,12 +44,15 @@ const PgSession = connectPgSimple(session)
 app.use(session({
   store: new PgSession({ pool, createTableIfMissing: true }),
   secret: process.env.SESSION_SECRET!,
-  name: 'admin_session',
+  // Både admin och kunder loggas in i samma session
+  name: 'vikingsas_session',
   resave: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
     sameSite: 'lax',
+    // Secure över https i produktion, men inte på http://localhost där webbläsaren då skulle tappa kakan
+    secure: 'auto',
     maxAge: 24 * 60 * 60 * 1000,
   },
 }))
@@ -59,6 +66,7 @@ app.use('/api/orders', ordersRouter)
 app.use('/api/currency', currencyRouter)
 app.use('/api/search', searchRouter)
 app.use('/api/shipping', shippingRouter)
+app.use('/api/auth', authRouter)
 
 app.use('/api/admin', adminAuthRouter)
 app.use('/api/admin/products', requireAuth, adminProductsRouter)

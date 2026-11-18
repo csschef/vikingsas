@@ -2,6 +2,7 @@ import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import { pool } from '../db.js'
 import { requireAuth } from '../middleware/requireAuth.js'
+import { renewSession } from '../lib/session.js'
 
 const router = Router()
 
@@ -20,7 +21,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ status: 'fel', error: 'Fel e-post eller lösenord'})
     }
 
-    req.session.userId = user.id
+    await renewSession(req, { userId: user.id, customerId: req.session.customerId })
     res.json({ email: user.email})
   } catch (error) {
     res.status(500).json({
@@ -30,10 +31,10 @@ router.post('/login', async (req, res) => {
   }
 })
 
-router.post('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.json({ status: 'ok' })
-  })
+// En inloggad kund i samma webbläsare loggas inte ut
+router.post('/logout', async (req, res) => {
+  await renewSession(req, { customerId: req.session.customerId })
+  res.json({ status: 'ok' })
 })
 
 router.get('/me', requireAuth, (_req, res) => {
