@@ -14,6 +14,8 @@
   --focus-width: 2px;
   --radius-sm: 0.4rem;
   --radius-md: 0.6rem;
+  --radius-pill: 999px;
+  --opacity-disabled: 0.6;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -177,7 +179,8 @@ h2 {
 
 .cart-page,
 .checkout-page,
-.thank-you-page {
+.thank-you-page,
+.account-page {
   max-width: 60rem;
   margin: 0 auto;
   min-height: 100svh;
@@ -194,6 +197,7 @@ h2 {
 .cart-page h1,
 .checkout-page h1,
 .thank-you-page h1,
+.account-page h1,
 .products-page h1 {
   font-size: clamp(2rem, 5vw, 3.5rem);
   font-weight: 300;
@@ -650,6 +654,91 @@ h2 {
   margin: 0.25rem 0 0;
   color: var(--muted);
   font-size: 0.8rem;
+}
+
+.checkout-account {
+  margin: 0 0 var(--space-5);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+/* Mina sidor */
+
+.account-page {
+  max-width: 38rem;
+}
+
+.account-page .form-error {
+  margin-bottom: var(--space-5);
+}
+
+.account-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.account-who p {
+  margin: 0;
+}
+
+.account-logout {
+  padding: var(--space-2) var(--space-4);
+  border: var(--border-width) solid var(--line);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color var(--transition);
+}
+
+.account-logout:hover {
+  border-color: var(--glow);
+}
+
+.account-logout:disabled {
+  cursor: progress;
+  opacity: var(--opacity-disabled);
+}
+
+.account-heading {
+  margin: var(--space-5) 0 var(--space-4);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.account-order + .account-order {
+  margin-top: var(--space-4);
+}
+
+.account-order-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-4);
+}
+
+.account-order-date {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.account-order-status {
+  margin: var(--space-1) 0 var(--space-4);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
 }
 
 /* Produkter och sök */

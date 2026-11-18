@@ -4,10 +4,12 @@ import ProductsPage from './pages/ProductsPage'
 import CheckoutPage from './pages/CheckoutPage'
 import ThankYouPage from './pages/ThankYouPage'
 import CartPage from './pages/CartPage'
+import AccountPage from './pages/AccountPage'
 import SiteLayout from './components/SiteLayout'
 import AdminLayout from './components/AdminLayout'
 import AdminLoginPage from './pages/AdminLoginPage'
 import { CartProvider } from './context/CartContext'
+import { CustomerProvider } from './context/CustomerContext'
 import AdminProductsPage from './pages/AdminProductsPage'
 import AdminProductFormPage from './pages/AdminProductFormPage'
 import AdminOrdersPage from './pages/AdminOrdersPage'
@@ -17,28 +19,31 @@ import AdminShippingPage from './pages/AdminShippingPage'
 function App() {
   return (
     <CartProvider>
-      <Router>
-        <Routes>
-          <Route element={<SiteLayout />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/produkter" element={<ProductsPage />} />
-            <Route path="/kassa" element={<CheckoutPage />} />
-            <Route path="/tack" element={<ThankYouPage />} />
-            <Route path="/varukorg" element={<CartPage />} />
-          </Route>
+      <CustomerProvider>
+        <Router>
+          <Routes>
+            <Route element={<SiteLayout />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/produkter" element={<ProductsPage />} />
+              <Route path="/kassa" element={<CheckoutPage />} />
+              <Route path="/tack" element={<ThankYouPage />} />
+              <Route path="/varukorg" element={<CartPage />} />
+              <Route path="/mina-sidor" element={<AccountPage />} />
+            </Route>
 
-          <Route path="/admin/logga-in" element={<AdminLoginPage />} />
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<Navigate to="/admin/ordrar" replace />} />
-            <Route path="produkter" element={<AdminProductsPage />} />
-            <Route path="produkter/ny" element={<AdminProductFormPage />} />
-            <Route path="produkter/:id" element={<AdminProductFormPage />} />
-            <Route path="ordrar" element={<AdminOrdersPage />} />
-            <Route path="ordrar/:id" element={<AdminOrderDetailPage />} />
-            <Route path="frakt" element={<AdminShippingPage />} />
-          </Route>
-        </Routes>
-      </Router>
+            <Route path="/admin/logga-in" element={<AdminLoginPage />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to="/admin/ordrar" replace />} />
+              <Route path="produkter" element={<AdminProductsPage />} />
+              <Route path="produkter/ny" element={<AdminProductFormPage />} />
+              <Route path="produkter/:id" element={<AdminProductFormPage />} />
+              <Route path="ordrar" element={<AdminOrdersPage />} />
+              <Route path="ordrar/:id" element={<AdminOrderDetailPage />} />
+              <Route path="frakt" element={<AdminShippingPage />} />
+            </Route>
+          </Routes>
+        </Router>
+      </CustomerProvider>
     </CartProvider>
   )
 }

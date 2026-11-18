@@ -125,3 +125,21 @@ export type OrderItem = {
   quantity: number
   unit_price: number
 }
+
+// Den inloggade kunden, från /api/auth/me
+export type Customer = {
+  name: string
+  email: string
+}
+
+// En order under Mina sidor
+export type AccountOrder = {
+  id: number
+  created_at: string
+  total_amount: string
+  status: Order['status']
+  payment_status: Order['payment_status']
+  shipping_method_name: string | null
+  shipping_price: string | null
+  items: { product_title: string; unit_price: string; quantity: number }[]
+}

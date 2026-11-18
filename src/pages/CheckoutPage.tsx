@@ -5,6 +5,7 @@ import type { CartItem, ShippingMethodCode } from '../types/types'
 import { formatCurrency } from '../utils/format'
 import { completePostalCode } from '../utils/shipping'
 import { CurrencyContext } from '../context/CurrencyContext'
+import { CustomerContext } from '../context/CustomerContext'
 import ShippingSection, { type ShippingLookup } from '../components/ShippingSection'
 
 // Laddas en gång, utanför komponenten. Den publika nyckeln kan bara visa formuläret, inte skapa betalningar.
@@ -108,6 +109,17 @@ function CheckoutPage() {
       .then((data) => setCartItems(data.cart_items))
       .catch((error) => console.error('Kunde inte hämta varukorgen', error))
   }, [])
+
+  // Inloggad kund slipper skriva namn och e-post. Det kunden redan har skrivit skrivs inte över.
+  const { customer } = useContext(CustomerContext)
+  useEffect(() => {
+    if (!customer) return
+    setFormData((prev) => ({
+      ...prev,
+      customer_name: prev.customer_name || customer.name,
+      customer_email: prev.customer_email || customer.email,
+    }))
+  }, [customer])
 
   useEffect(() => {
     if (!postalCode) return
@@ -277,6 +289,7 @@ function CheckoutPage() {
   return (
     <main className="checkout-page">
       <h1>Kassa</h1>
+      {customer && <p className="checkout-account">Inloggad som {customer.email}. Ordern sparas under Mina sidor.</p>}
       <div className="checkout-layout">
         <form onSubmit={handleSubmit} noValidate>
           <label>

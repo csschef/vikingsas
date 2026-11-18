@@ -1,13 +1,15 @@
-import { ShoppingCartSimpleIcon } from '@phosphor-icons/react'
+import { ShoppingCartSimpleIcon, UserIcon } from '@phosphor-icons/react'
 import { Link } from 'react-router'
 import { useState, useEffect, useContext } from 'react'
 import { CartContext } from '../context/CartContext'
 import { CurrencyContext } from '../context/CurrencyContext'
+import { CustomerContext } from '../context/CustomerContext'
 
 function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
   const { count } = useContext(CartContext)
   const { currency, currencies, changeCurrency } = useContext(CurrencyContext)
+  const { customer } = useContext(CustomerContext)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -44,6 +46,10 @@ function Header() {
             ))}
           </select>
         )}
+        {/* Ikon i stället för text, så att menyn inte ändrar bredd vid inloggning */}
+        <Link to="/mina-sidor" className="nav-link" aria-label={customer ? 'Mina sidor' : 'Logga in'}>
+          <UserIcon size={22} />
+        </Link>
         <Link to="/varukorg" className="nav-link">
           <ShoppingCartSimpleIcon size={22} />
           {count > 0 && <span className="cart-count">{count}</span>}
