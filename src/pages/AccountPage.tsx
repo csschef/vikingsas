@@ -88,12 +88,16 @@ function AccountPage() {
   return (
     <main className="account-page">
       <h1>Mina sidor</h1>
-      {loginError && <p className="form-error" role="alert">{loginError}</p>}
 
       <div className="account-who">
-        <p>
-          Inloggad som <strong>{customer.name}</strong>, {customer.email}
-        </p>
+        <div>
+          <p className="account-name">{customer.name}</p>
+          {/* wbr låter en lång adress brytas före @ i stället för mitt i ett ord */}
+          <p className="account-email">
+            {customer.email.split('@')[0]}
+            <wbr />@{customer.email.split('@')[1]}
+          </p>
+        </div>
         <button type="button" className="account-logout" onClick={handleLogout} disabled={loggingOut}>
           Logga ut
         </button>
