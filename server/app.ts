@@ -11,6 +11,7 @@ import currencyRouter from './routes/currency.js'
 import searchRouter from './routes/search.js'
 import shippingRouter from './routes/shipping.js'
 import authRouter from './routes/auth.js'
+import accountRouter from './routes/account.js'
 import adminAuthRouter from './routes/adminAuth.js'
 import adminProductsRouter from './routes/adminProducts.js'
 import adminOrdersRouter from './routes/adminOrders.js'
@@ -20,6 +21,7 @@ import adminShippingRouter from './routes/adminShipping.js'
 import stripeWebhookRouter from './routes/stripeWebhook.js'
 import { sessionCookie } from './middleware/sessionCookie.js'
 import { requireAuth } from './middleware/requireAuth.js'
+import { requireCustomer } from './middleware/requireCustomer.js'
 
 declare module 'express-session' {
   interface SessionData {
@@ -67,6 +69,7 @@ app.use('/api/currency', currencyRouter)
 app.use('/api/search', searchRouter)
 app.use('/api/shipping', shippingRouter)
 app.use('/api/auth', authRouter)
+app.use('/api/account', requireCustomer, accountRouter)
 
 app.use('/api/admin', adminAuthRouter)
 app.use('/api/admin/products', requireAuth, adminProductsRouter)

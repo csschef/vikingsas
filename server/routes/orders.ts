@@ -113,8 +113,8 @@ router.post('/', async (req, res) => {
                            shipping_street, shipping_postal_code, shipping_city, total_amount, cart_id,
                            shipping_method, shipping_method_name, shipping_price,
                            service_point_status, service_point_id, service_point_country_code, service_point_name,
-                           service_point_street, service_point_postal_code, service_point_city)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+                           service_point_street, service_point_postal_code, service_point_city, customer_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
        RETURNING id`,
       [
         customer.customer_name,
@@ -135,6 +135,8 @@ router.post('/', async (req, res) => {
         servicePoint.service_point_street,
         servicePoint.service_point_postal_code,
         servicePoint.service_point_city,
+        // Inloggad kund får ordern under Mina sidor, en gäst får null
+        req.session.customerId ?? null,
       ]
     )
     orderId = order.rows[0].id
