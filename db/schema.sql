@@ -112,3 +112,14 @@ ALTER TABLE orders ADD CONSTRAINT orders_service_point_check CHECK (
     ELSE false
   END
 );
+
+CREATE TABLE customers (
+  id SERIAL PRIMARY KEY,
+  google_sub TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL,
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE orders ADD COLUMN customer_id INTEGER REFERENCES customers(id);
+CREATE INDEX orders_customer_id_idx ON orders (customer_id);
