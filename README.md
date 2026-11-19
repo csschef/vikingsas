@@ -50,6 +50,8 @@ Varje sås har en egen sektion på startsidan med styrka, pris och en utfällbar
 - kassa med namn, e-post, telefon och adress, och kortbetalning med Stripe
 - frakt med PostNord: ombud, paketbox eller hemleverans, beräknad leverans och fri frakt över en gräns
 - tacksida som visar ordern, frakten och om betalningen har gått igenom
+- inloggning med Google, och Mina sidor med kundens egna beställningar
+- orderbekräftelse via e-post när betalningen är klar
 
 ### Admin
 
@@ -71,6 +73,7 @@ Adminpanelen länkas inte från butiken, den nås på `/admin/logga-in`.
 - express-session med connect-pg-simple, bcryptjs
 - Zod för att validera data från andra system och från webbläsaren
 - Algolia för sökningen, Stripe för betalningen, Frankfurter för valutakurserna, PostNord för frakten
+- Google (OAuth 2.0 och OpenID Connect) för kundinloggningen, Resend för e-posten
 - Nodes inbyggda testkörare via tsx
 - Vercel
 
@@ -179,6 +182,74 @@ AI skrev koden för frakten, och jag kontrollerade den mot PostNords dokumentati
 - **Vad som skilde sig:** rätt endpoints är `/transittime/addresstoaddress` och `/transittime/addresstolocation`, svaret är en lista där fel kommer som rader i ett 200 OK, och `startTime` är när PostNord får paketet. Dokumentationen hade också egna fel, till exempel en lista med ombudstyper som ger 400 för Sverige, och latitud och longitud som har bytt plats.
 - **Hur det löstes:** varje antagande prövades mot sandlådan innan koden skrevs om, och testerna skrevs innan de sista bristerna rättades. Första körningen gav 9 fel av 56, och alla rättades.
 
+### Orderbekräftelse med Resend
+
+När en order blir betald får kunden en orderbekräftelse till e-postadressen från kassan. Mejlet har ordernumret i ämnesraden, kundens namn, produkterna med antal och pris, frakten och totalsumman, både som HTML och som vanlig text.
+
+- **En fil känner till Resend.** `server/integrations/emailAdapter.ts` har adressen och nyckeln, väntar max 5 sekunder och kontrollerar Resends svar med Zod. Innehållet byggs i `server/lib/orderConfirmation.ts`, Resend vet ingenting om ordrar.
+- **Skickas i webhooken, inte vid köpet.** Mejlet går iväg först när Stripes webhook har satt ordern som Betald och transaktionen är klar. Kunden som klickar på Köp men aldrig betalar får inget mejl.
+- **En bekräftelse per order, på två sätt.** Webhooken skickar bara när ordern just gick från Obetald till Betald, så en händelse som kommer igen från Stripe skickar inget. Varje utskick har dessutom en `Idempotency-Key`, `order-confirmation/<orderns id>`, så Resend skickar inte samma mejl två gånger inom 24 timmar även om koden skulle försöka.
+- **Ett misslyckat mejl stoppar inte ordern.** Ordern är redan betald när mejlet skickas. Svarar Resend inte, eller med ett fel, loggas det och webhooken svarar ändå 200. Ett 500 hade fått Stripe att skicka händelsen igen för en order som redan är klar. Svagheten är att mejlet inte försöks igen av sig själv, men felet och ordernumret står i loggen.
+- **Kundens uppgifter escapas.** Namn och produktnamn kommer utifrån, och utan escaping kan ett namn som `<a href="...">` bli en riktig länk i mejlet. `&` byts först, annars blir det som redan escapats fel.
+- **Avsändaren är `onboarding@resend.dev`**, eftersom jag inte har verifierat någon domän. Den kan bara skicka till adressen på mitt Resend-konto. En beställning med en annan adress blir betald som vanligt, och Resends 403 hamnar i loggen.
+
+## Autentisering
+
+Kunder loggar in med sitt Google-konto via OAuth 2.0 och OpenID Connect. Det är frivilligt, det går fortfarande att handla som gäst. Den som är inloggad får sina beställningar under Mina sidor, och namn och e-post ifyllda i kassan. Admin loggar in med e-post och lösenord som tidigare.
+
+### Inloggningsflödet
+
+1. Kunden klickar på Logga in med Google på `/mina-sidor`. Länken går till min server, `GET /api/auth/google`, inte direkt till Google.
+2. Servern skapar två slumpade värden, `state` och en code verifier, och sparar dem i två httpOnly-kakor som gäller i 10 minuter och bara skickas till `/api/auth/google`. Sedan skickas kunden till Google med `state`, hashen av verifiern (`code_challenge`), mitt client id, callback-adressen och scope `openid email profile`. Google frågar alltså bara om namn och e-post.
+3. Kunden loggar in hos Google och skickas tillbaka till `GET /api/auth/google/callback?code=...&state=...`.
+4. Servern jämför `state` med kakan och raderar båda kakorna, de används bara en gång. Saknas kakan eller skiljer sig värdet avbryts inloggningen.
+5. Servern byter koden mot tokens hos Google, direkt mellan servern och Google, med client secret och code verifier. Client secret finns bara i `.env` och på Vercel.
+6. Servern läser kunden ur ID-token och kontrollerar med Zod att den är utfärdad av Google (`iss`), till min app (`aud`), inte har gått ut (`exp`) och att e-postadressen är verifierad.
+7. Kunden letas upp på Googles `sub` i tabellen `customers`, eller skapas om den inte finns. Namn och e-post uppdateras vid varje inloggning.
+8. Servern startar en ny session med kundens id och skickar kunden till Mina sidor. Nu vet shoppen vem kunden är.
+
+Trycker kunden på Avbryt hos Google, eller svarar Google inte inom 5 sekunder, hamnar kunden på Mina sidor med ett begripligt fel i stället för en trasig sida.
+
+**state och PKCE skyddar mot olika saker, och jag valde båda.**
+
+- `state` skyddar mot att någon annan startar inloggningen. Utan den kan en angripare logga in på sitt eget konto, stoppa innan callbacken och skicka sin callback-länk till kunden. Kunden blir då inloggad som angriparen, och det kunden sedan köper hamnar på angriparens konto. Med `state` avvisas länken, eftersom kunden inte har en kaka med samma värde.
+- PKCE skyddar koden. Snappar någon upp koden på vägen tillbaka, till exempel i en logg eller i webbläsarens historik, går den inte att byta mot tokens utan verifiern. Google fick bara hashen i början och kontrollerar att verifiern ger samma hash.
+
+Min server har client secret, så koden går inte att byta utan den ändå. PKCE är alltså ett extra lager här, men det kostade bara några rader.
+
+### Tokens
+
+- **ID-token från Google.** En JWT med vem kunden är: `sub`, e-post, namn. Den gäller i en timme, men jag använder den bara en gång, i callbacken, och sparar den inte. Signaturen kontrolleras inte, eftersom token kommer direkt från Google över https och aldrig passerar webbläsaren. Fälten kontrolleras däremot.
+- **Access token från Google.** Kommer i samma svar och gäller i en timme. Den används för att anropa Googles API:er för kundens räkning, och det behöver butiken inte. Den används inte och sparas inte. Ingen refresh token, eftersom jag inte ber om åtkomst när kunden inte är inne.
+- **Butikens sessionskaka, `vikingsas_session`.** Det enda som stannar i webbläsaren. Den innehåller bara ett slumpat, signerat id. Själva sessionen med kundens id ligger i tabellen `session` i Postgres. Kakan är httpOnly, så JavaScript kan inte läsa den, Secure i produktion, så den bara skickas över https, och SameSite=Lax. Den gäller i 24 timmar eller tills kunden loggar ut.
+- **Kakorna `oauth_state` och `oauth_verifier`.** Gäller i 10 minuter och raderas i callbacken.
+- **Resends API-nyckel.** Butikens egen nyckel, ingen kund är inblandad. Den ligger i `.env` och på Vercel och gäller tills jag spärrar den i Resend.
+
+Inga tokens från Google och inga nycklar når webbläsarens JavaScript. React frågar `GET /api/auth/me` vem som är inloggad och får bara namn och e-post.
+
+### Session eller JWT
+
+Jag valde session, samma som admin redan hade, i stället för en JWT i kakan.
+
+- **Den går att spärra direkt.** Sessionen ligger i databasen. När kunden loggar ut raderas den, och kakan slutar fungera samma sekund. Blir en kaka stulen kan sessionen raderas. En JWT gäller tills den går ut, och för att stoppa den tidigare behövs en spärrlista i databasen, och då har jag byggt en session ändå.
+- **Kakan avslöjar ingenting.** En JWT bär kundens uppgifter i klartext, bara signerade. Sessionskakan är ett slumpat id.
+- **Den fanns redan.** express-session med sessionerna i Postgres användes för admin, så det blev inga nya paket och ingen ny hemlighet.
+
+Nackdelen är att varje skyddat anrop slår upp sessionen i databasen. För en butik med en server och en databas spelar det ingen roll. JWT passar bättre när flera tjänster ska kunna kontrollera inloggningen utan att dela databas.
+
+Två saker till:
+
+- **Nytt sessions-id vid varje in- och utloggning** (`req.session.regenerate`). Ett id som någon har fått tag på innan inloggningen blir då oanvändbart.
+- **Admin och kund i samma webbläsare.** Båda ligger i samma session, och den ena loggar inte ut den andra.
+
+### Konton och e-postadresser
+
+Kunder känns igen på Googles `sub`, aldrig på e-postadressen. Byter kunden e-post hos Google är det fortfarande samma kund.
+
+Lösenordsinloggningen finns bara för admin, i tabellen `users`. Kunderna ligger i en egen tabell, `customers`, och ingenting slås ihop. En admin som loggar in med Google blir en vanlig kund utan adminrättigheter, även om e-postadressen är densamma. Gästordrar med samma e-postadress kopplas inte heller till kontot i efterhand, eftersom vem som helst kan skriva vilken adress som helst i kassan.
+
+Mina sidor hämtar `GET /api/account/orders`, som svarar 401 utan inloggning. Kundens id tas från sessionen, aldrig från webbläsaren, så en kund kan bara se sina egna ordrar. Avbrutna köp visas inte.
+
 ## Reflektion
 
 ### Integrationsmodeller
@@ -230,6 +301,8 @@ Alla är gratis, och bara testlägen används:
 - **Algolia** för sökningen
 - **Stripe** i testläge, och [Stripe CLI](https://docs.stripe.com/stripe-cli) för att ta emot webhooks lokalt
 - **PostNord** för ombud och leveranstid. Skapa ett konto på [atdeveloper.postnord.com](https://atdeveloper.postnord.com), välj Customer plan och skapa en nyckel för sandlådan
+- **Google Cloud** för kundinloggningen. Skapa ett projekt, fyll i OAuth consent screen med Audience External, och skapa en klient av typen Web application under Clients. Lägg till `http://localhost:5173/api/auth/google/callback` under Authorized redirect URIs. Client secret visas bara när klienten skapas. Med bara `openid email profile` kan alla Google-konton logga in, inga testanvändare behövs
+- **Resend** för orderbekräftelserna. Skapa en nyckel under API Keys med behörigheten Sending access
 
 Leverantörens API och Frankfurter behöver inga egna konton.
 
@@ -291,7 +364,11 @@ Sessionens id står i kolumnen `stripe_session_id` i `orders`.
 
 **Frakt.** Lägg något i varukorgen, gå till kassan och skriv ett postnummer, till exempel 393 65. Sandlådan ger ombud och leveranstider med PostNords testdata. 00000 ger felet för ett postnummer som inte finns. Fraktpriserna ändras i admin under Frakt.
 
-**Tester.** `npm test` kör testerna för frakten. De använder låtsade svar från PostNord, så de behöver ingen `.env` och anropar aldrig PostNord.
+**Inloggning.** Öppna http://localhost:5173/mina-sidor och logga in med Google. Vite måste ligga på samma port som i `GOOGLE_CALLBACK_URL`, annars stoppar Google inloggningen. Tryck på Avbryt hos Google för att se felmeddelandet.
+
+**E-post.** Köp något med e-postadressen till ditt Resend-konto. Mejlet syns i inkorgen och under Emails i Resend. Med en felaktig `RESEND_API_KEY` blir ordern ändå betald, och felet står i terminalen där API:et kör.
+
+**Tester.** `npm test` kör testerna för frakten, inloggningen och e-posten. De använder låtsade svar, så de behöver ingen `.env` och anropar aldrig PostNord, Google eller Resend.
 
 ## Kommandon
 
@@ -302,7 +379,7 @@ Sessionens id står i kolumnen `stripe_session_id` i `orders`.
 | `npm run build`     | typkontroll med `tsc -b`, sedan bygger frontend         |
 | `npm run preview`   | visar det byggda resultatet lokalt                      |
 | `npm run lint`      | kör oxlint                                              |
-| `npm test`          | kör testerna, utan nycklar och utan anrop till PostNord |
+| `npm test`          | kör testerna, utan nycklar och utan anrop utåt          |
 | `npx vercel --prod` | deployar till produktion                                |
 
 ## Databas
@@ -312,6 +389,8 @@ SQL:en körs manuellt i Supabase SQL editor, det finns ingen automatisk migrerin
 - `db/schema.sql` skapar tabellerna i en ny, tom databas
 - `db/seed.sql` lägger in de tio produkterna och de två fraktsätten. Körs bara en gång, `title` är inte unik så en andra körning ger dubbletter
 - `db/migrations/` innehåller ändringar som körs en gång mot en databas som redan finns, en fil per ändring med datum i namnet. Samma ändringar står också sist i `db/schema.sql`
+
+Tabellen `customers` har Row Level Security på utan regler. Det stänger Supabase publika API för kundernas namn och e-post. Servern ansluter som ägare av tabellen och påverkas inte.
 
 Supabase-projektet får inte pausas, då slutar den deployade butiken visa produkter.
 
@@ -341,6 +420,10 @@ Nycklarna ligger som miljövariabler på Vercel, samma namn som i `.env.example`
 
 För frakten behövs `POSTNORD_API_URL` och `POSTNORD_API_KEY`. `SHOP_POSTAL_CODE`, `SHIPPING_CUTOFF_HOUR` och `SHIPPING_HANDOVER_HOUR` kan utelämnas, då gäller 39365, 12 och 14. En ändrad variabel gäller först efter nästa deploy.
 
+För inloggningen behövs `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` och `GOOGLE_CALLBACK_URL=https://chili-ehandel.vercel.app/api/auth/google/callback`. Samma adress måste stå under Authorized redirect URIs i Google Cloud. För e-posten behövs `RESEND_API_KEY` och `EMAIL_FROM`.
+
+Express ligger bakom Vercels proxy, därför står `app.set('trust proxy', 1)` i `app.ts`. Utan den tror Express att anropet kom över http, och då skickas aldrig sessionskakan som är Secure.
+
 Vercel kör `vite build` i molnet, inte `npm run build`. Typkontrollen sker alltså bara lokalt, körs innan deploy.
 
 ## Om något strular
@@ -364,6 +447,10 @@ $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Env
 **Tacksidan kan inte nås efter betalningen lokalt.** Stripe skickar kunden till `CLIENT_URL`. Startade Vite på en annan port än den som står där hamnar kunden fel.
 
 **Kassan visar inga ombud, eller säger att leveransalternativet inte kunde kontrolleras.** Sök på "Integrationsfel mot PostNord" eller "PostNord svarar inte" i loggen på Vercel. Raden visar vad PostNord svarade, och nyckeln är maskerad. Hos mig saknades ett tecken i `POSTNORD_API_KEY` på Vercel.
+
+**Google säger `redirect_uri_mismatch`.** `GOOGLE_CALLBACK_URL` stämmer inte tecken för tecken med en adress under Authorized redirect URIs. Lokalt är det oftast att Vite har startat på en annan port.
+
+**Ingen orderbekräftelse kommer fram.** Sök på "Orderbekräftelsen för order" i loggen. Med `onboarding@resend.dev` som avsändare ger alla andra mottagare än Resend-kontots egen adress 403.
 
 ## Dokumentation
 
