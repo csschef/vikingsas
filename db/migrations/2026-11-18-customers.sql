@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS customers (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Stänger Supabase publika API för tabellen. Servern ansluter som ägare och påverkas inte.
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+
 -- Tom för gästköp och för ordrar från innan inloggningen fanns
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id);
 CREATE INDEX IF NOT EXISTS orders_customer_id_idx ON orders (customer_id);

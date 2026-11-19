@@ -121,5 +121,7 @@ CREATE TABLE customers (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE orders ADD COLUMN customer_id INTEGER REFERENCES customers(id);
 CREATE INDEX orders_customer_id_idx ON orders (customer_id);
